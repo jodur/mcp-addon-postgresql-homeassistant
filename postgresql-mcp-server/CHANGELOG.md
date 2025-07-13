@@ -1,5 +1,19 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.3.6] - 2025-07-13
+
+### Fixed
+- Fixed tool registration to use comprehensive database-tools.ts module instead of basic inline tools
+- Now properly exposes listTables and queryDatabase tools for full database functionality
+- Updated all version numbers to 1.3.6 for consistency across all files
+- Fixed health endpoint to display correct version number
+- Corrected addon configuration file formatting
+
+### Technical
+- Replaced basic inline tool registration with comprehensive database-tools.ts import
+- Verified tool registration exposes 2 comprehensive database tools correctly
+- Fixed import path for registerDatabaseTools function
+
 ## [1.3.0] - 2025-07-13
 
 ### Added
