@@ -35,4 +35,24 @@ When working with this codebase:
 4. **TypeScript**: Maintain strict typing throughout the codebase
 5. **MCP Protocol**: Follow MCP specifications for tool definitions and responses
 
+## Version Management
+
+**IMPORTANT**: When making changes that will be deployed to users, ALWAYS update version numbers:
+
+1. **Update addon version** in `postgresql-mcp-server/config.yaml` (version field)
+2. **Update package version** in `postgresql-mcp-server/package.json` (version field)
+3. **Update all source code versions** in `postgresql-mcp-server/src/index.ts`:
+   - McpServer version
+   - Health check endpoint version
+   - Server info version
+4. **Update changelogs**:
+   - Main repository: `CHANGELOG.md`
+   - Addon specific: `postgresql-mcp-server/CHANGELOG.md`
+5. **Build TypeScript** with `npm run build`
+6. **Commit and push** changes to trigger Home Assistant update detection
+
+Version format: `MAJOR.MINOR.PATCH` (e.g., 1.2.1 → 1.2.2 for patches, 1.2.1 → 1.3.0 for features)
+
+**Home Assistant addon updates require version increments** - users won't see updates without version changes!
+
 You can find more info and examples at https://modelcontextprotocol.io/llms-full.txt

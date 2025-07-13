@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2025-01-13
+
+### Added
+- Comprehensive configuration debugging to identify why addon settings aren't being read
+- Enhanced run.sh with detailed bashio configuration debugging
+- Fallback configuration reader using direct JSON parsing from /data/options.json
+- Node.js configuration reader as backup when bashio commands fail
+- Filesystem and environment debugging for troubleshooting
+
+### Fixed
+- Configuration parameters not being properly passed from Home Assistant to container
+- Missing default values when configuration reading fails
+- Container now properly restarts with new parameters instead of requiring rebuild
+
+### Improved
+- Better error handling and logging for configuration issues
+- Added jq to Dockerfile for improved JSON parsing capabilities
+
 ## [1.2.0] - 2025-01-13
 
 ### Added
