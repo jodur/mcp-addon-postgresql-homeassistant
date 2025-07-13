@@ -1,0 +1,118 @@
+{
+  "info": {
+    "name": "PostgreSQL MCP Server Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://192.168.39.5:3001/health",
+          "protocol": "http",
+          "host": ["192.168.39.5"],
+          "port": "3000",
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "MCP Initialize",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJiZWVkMDZkODNjMWI0NDgyYjJlNTc1ZWRlZDIxMGNlNSIsImlhdCI6MTc1MjM5MDcyMiwiZXhwIjoyMDY3NzUwNzIyfQ.fnzjsA90LWYrAxBFlqZbdzoAlcQxo3iQVgXptlMzx8o"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"method\": \"initialize\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3001/mcp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["mcp"]
+        }
+      }
+    },
+    {
+      "name": "MCP Tools List",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJiZWVkMDZkODNjMWI0NDgyYjJlNTc1ZWRlZDIxMGNlNSIsImlhdCI6MTc1MjM5MDcyMiwiZXhwIjoyMDY3NzUwNzIyfQ.fnzjsA90LWYrAxBFlqZbdzoAlcQxo3iQVgXptlMzx8o"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"method\": \"tools/list\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3001/mcp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["mcp"]
+        }
+      }
+    },
+    {
+      "name": "MCP Resources List",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJiZWVkMDZkODNjMWI0NDgyYjJlNTc1ZWRlZDIxMGNlNSIsImlhdCI6MTc1MjM5MDcyMiwiZXhwIjoyMDY3NzUwNzIyfQ.fnzjsA90LWYrAxBFlqZbdzoAlcQxo3iQVgXptlMzx8o"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"method\": \"resources/list\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3001/mcp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["mcp"]
+        }
+      }
+    }
+  ]
+}
