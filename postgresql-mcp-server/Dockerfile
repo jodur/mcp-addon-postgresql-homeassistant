@@ -1,7 +1,13 @@
 FROM node:18-alpine
 
-# Install curl for health checks and jq for configuration parsing
-RUN apk add --no-cache curl jq bash
+# Install curl for health checks, jq for configuration parsing, and bash for bashio
+RUN apk add --no-cache curl jq bash git
+
+# Install bashio (Home Assistant addon utility library)
+RUN git clone --depth 1 https://github.com/hassio-addons/bashio.git /tmp/bashio \
+    && mv /tmp/bashio/lib /usr/lib/bashio \
+    && ln -s /usr/lib/bashio/bashio /usr/bin/bashio \
+    && rm -rf /tmp/bashio
 
 # Set working directory
 WORKDIR /app

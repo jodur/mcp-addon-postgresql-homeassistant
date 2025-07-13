@@ -1,7 +1,7 @@
 # Home Assistant Addon Configuration
 name: "PostgreSQL MCP Server"
 description: "Model Context Protocol server for PostgreSQL database access with authentication"
-version: "1.2.4"
+version: "1.2.5"
 slug: "postgresql-mcp-server"
 url: "https://github.com/jodur/mcp-addon-postgresql-homeassistant"
 codenotary: "notary@home-assistant.io"
@@ -37,7 +37,5 @@ ports:
   "3000/tcp": 3000
 ports_description:
   "3000/tcp": "MCP Server HTTP Port"
-environment:
-  LOG_LEVEL: "info"
 # Note: Image will be built locally by Home Assistant
 # For local addons, remove the image field to let HA build from Dockerfile
