@@ -1,5 +1,23 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.2.1] - 2025-01-13
+
+### Added
+- Comprehensive configuration debugging to identify why addon settings aren't being read
+- Enhanced run.sh with detailed bashio configuration debugging
+- Fallback configuration reader using direct JSON parsing from /data/options.json
+- Node.js configuration reader as backup when bashio commands fail
+- Filesystem and environment debugging for troubleshooting
+
+### Fixed
+- Configuration parameters not being properly passed from Home Assistant to container
+- Missing default values when configuration reading fails
+- Container now properly restarts with new parameters instead of requiring rebuild
+
+### Improved
+- Better error handling and logging for configuration issues
+- Added jq to Dockerfile for improved JSON parsing capabilities
+
 ## [1.2.0] - 2025-01-13
 
 ### Added

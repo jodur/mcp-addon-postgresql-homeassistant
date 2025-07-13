@@ -61,7 +61,7 @@ app.use(express.urlencoded({ extended: true }));
 // Create MCP Server instance
 const mcpServer = new McpServer({
   name: 'PostgreSQL MCP Server for Home Assistant',
-  version: '1.2.0',
+  version: '1.2.1',
   capabilities: {
     tools: {},
     resources: {},
@@ -117,7 +117,7 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     database: dbInitialized ? 'connected' : 'disconnected',
-    version: '1.2.0'
+    version: '1.2.1'
   });
 });
 
@@ -142,7 +142,7 @@ app.post('/mcp', authenticateToken, async (req, res) => {
           },
           serverInfo: {
             name: 'PostgreSQL MCP Server for Home Assistant',
-            version: '1.2.0'
+            version: '1.2.1'
           }
         }));
 
