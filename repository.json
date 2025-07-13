@@ -1,0 +1,5 @@
+{
+  "name": "PostgreSQL MCP Server Add-on Repository",
+  "url": "https://github.com/jodur/mcp-addon-postgresql-homeassistant",
+  "maintainer": "jodur"
+}

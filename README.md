@@ -1,6 +1,6 @@
-# PostgreSQL MCP Server for Home Assistant
+# PostgreSQL MCP Server for Home Assistant Add-on Repository
 
-A Home Assistant addon that provides a Model Context Protocol (MCP) server for PostgreSQL database access with authentication through Home Assistant's API token system.
+This repository contains a Home Assistant addon that provides a Model Context Protocol (MCP) server for PostgreSQL database access with authentication through Home Assistant's API token system.
 
 ## Features
 
@@ -14,10 +14,29 @@ A Home Assistant addon that provides a Model Context Protocol (MCP) server for P
 
 ## Installation
 
-1. Add this repository to your Home Assistant addon store
-2. Install the "PostgreSQL MCP Server" addon
-3. Configure the addon with your PostgreSQL connection details
-4. Start the addon
+### Step 1: Add Repository to Home Assistant
+
+1. Go to **Settings** > **Add-ons** > **Add-on Store** in your Home Assistant
+2. Click the **⋮** (three dots) menu in the top right corner
+3. Select **Repositories**
+4. Add this repository URL:
+   ```
+   https://github.com/jodur/mcp-addon-postgresql-homeassistant
+   ```
+5. Click **Add**
+
+### Step 2: Install the Add-on
+
+1. Find "PostgreSQL MCP Server" in the add-on store
+2. Click on it and then click **Install**
+3. Wait for the installation to complete
+
+### Step 3: Configure and Start
+
+1. Go to the **Configuration** tab
+2. Configure the addon with your PostgreSQL connection details
+3. Click **Save**
+4. Go to the **Info** tab and click **Start**
 
 ## Configuration
 
