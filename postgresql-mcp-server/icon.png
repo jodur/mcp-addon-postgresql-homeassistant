@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#336791" stroke="#ffffff" stroke-width="4"/>
+  
+  <!-- PostgreSQL elephant silhouette -->
+  <path d="M45 35c-12 0-20 8-20 18 0 8 4 14 10 18v20c0 6 4 10 10 10h15c4 0 8-2 10-5 2 3 6 5 10 5h15c6 0 10-4 10-10V66c6-4 10-10 10-18 0-10-8-18-20-18H45z" fill="#ffffff"/>
+  
+  <!-- Database icon overlay -->
+  <ellipse cx="64" cy="45" rx="18" ry="6" fill="#336791"/>
+  <rect x="46" y="45" width="36" height="12" fill="#336791"/>
+  <ellipse cx="64" cy="57" rx="18" ry="6" fill="#336791"/>
+  <rect x="46" y="57" width="36" height="12" fill="#336791"/>
+  <ellipse cx="64" cy="69" rx="18" ry="6" fill="#336791"/>
+  
+  <!-- MCP text -->
+  <text x="64" y="95" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#ffffff">MCP</text>
+</svg>
