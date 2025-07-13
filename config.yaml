@@ -3,7 +3,7 @@ name: "PostgreSQL MCP Server"
 description: "Model Context Protocol server for PostgreSQL database access with authentication"
 version: "1.0.0"
 slug: "postgresql-mcp-server"
-url: "https://github.com/your-repo/postgresql-mcp-server-addon"
+url: "https://github.com/jodur/mcp-addon-postgresql-homeassistant"
 arch:
   - armhf
   - armv7

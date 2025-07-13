@@ -280,7 +280,7 @@ MIT License - see LICENSE file for details.
 ## Support
 
 For issues and questions:
-- GitHub Issues: [Create an issue](https://github.com/your-repo/issues)
+- GitHub Issues: [Create an issue](https://github.com/jodur/mcp-addon-postgresql-homeassistant/issues)
 - Home Assistant Community: [Forum discussion](https://community.home-assistant.io/)
 
 ## Related Projects
