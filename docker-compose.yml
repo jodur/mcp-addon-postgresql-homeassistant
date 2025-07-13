@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  postgresql-mcp-server:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://mcpuser:mcppassword@postgres:5432/mcpdb
+      - SERVER_PORT=3000
+      - LOG_LEVEL=info
+      - ALLOWED_USERS=admin,user1
+      - ENABLE_WRITE_OPERATIONS=true
+      - MAX_CONNECTIONS=10
+    depends_on:
+      - postgres
+    networks:
+      - mcp-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=mcpdb
+      - POSTGRES_USER=mcpuser
+      - POSTGRES_PASSWORD=mcppassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mcp-network
+
+volumes:
+  postgres_data:
+
+networks:
+  mcp-network:
+    driver: bridge
