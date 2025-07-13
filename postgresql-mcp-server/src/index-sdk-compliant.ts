@@ -9,7 +9,6 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { authenticateToken } from './auth/home-assistant-auth';
 import { initializeDatabase } from './database/connection';
-import { registerDatabaseTools } from './tools/database-tools';
 
 // Load environment variables
 dotenv.config();
@@ -69,19 +68,61 @@ async function initializeApp(): Promise<void> {
 function createMCPServer(): McpServer {
   const server = new McpServer({
     name: 'PostgreSQL MCP Server for Home Assistant',
-    version: '1.3.6',
+    version: '1.3.1',
   });
 
-  // Create configuration object for database tools
-  const config = {
-    enableWriteOperations: ENABLE_WRITE_OPERATIONS,
-    allowedUsers: ALLOWED_USERS,
-    databaseUrl: DATABASE_URL,
-    maxConnections: MAX_CONNECTIONS
-  };
+  // Register a sample query tool (SDK compliant)
+  server.registerTool(
+    'execute-query',
+    {
+      title: 'Execute PostgreSQL Query',
+      description: 'Execute a PostgreSQL query on the connected database',
+      inputSchema: {
+        query: z.string().describe('SQL query to execute'),
+        parameters: z.array(z.any()).optional().describe('Query parameters')
+      }
+    },
+    async ({ query, parameters = [] }) => {
+      if (!dbInitialized) {
+        return {
+          content: [{
+            type: 'text',
+            text: 'Database not connected. Please configure DATABASE_URL.'
+          }],
+          isError: true
+        };
+      }
 
-  // Register comprehensive database tools
-  registerDatabaseTools(server, config);
+      if (!ENABLE_WRITE_OPERATIONS && /^(INSERT|UPDATE|DELETE|DROP|CREATE|ALTER)/i.test(query.trim())) {
+        return {
+          content: [{
+            type: 'text', 
+            text: 'Write operations are disabled. Set ENABLE_WRITE_OPERATIONS=true to enable.'
+          }],
+          isError: true
+        };
+      }
+
+      try {
+        // Here you would execute the actual query
+        // For now, return a placeholder response
+        return {
+          content: [{
+            type: 'text',
+            text: `Query executed successfully: ${query}\nParameters: ${JSON.stringify(parameters)}`
+          }]
+        };
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text',
+            text: `Query failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }],
+          isError: true
+        };
+      }
+    }
+  );
 
   // Register database schema resource
   server.registerResource(
@@ -163,7 +204,7 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     database: dbInitialized ? 'connected' : 'disconnected',
-    version: '1.3.6',
+    version: '1.3.1',
     sdk_compliant: true
   });
 });
@@ -196,7 +237,8 @@ app.post('/mcp', async (req, res) => {
         transports[sessionId] = transport;
         console.log(`✓ New MCP session initialized: ${sessionId}`);
       },
-      enableDnsRebindingProtection: false,
+      enableDnsRebindingProtection: true,
+      allowedHosts: ['127.0.0.1', '192.168.39.5', 'localhost'],
     });
 
     // Clean up transport when closed

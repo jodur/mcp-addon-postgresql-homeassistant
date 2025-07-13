@@ -1,6 +1,6 @@
 {
   "name": "mcp-addon-postgress-homeassistant",
-  "version": "1.3.4",
+  "version": "1.3.6",
   "description": "Home Assistant addon for PostgreSQL MCP server with authentication",
   "main": "dist/index.js",
   "scripts": {
