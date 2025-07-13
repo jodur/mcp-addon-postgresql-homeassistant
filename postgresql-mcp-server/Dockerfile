@@ -1,7 +1,7 @@
 FROM node:18-alpine
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+# Install curl for health checks and jq for configuration parsing
+RUN apk add --no-cache curl jq
 
 # Set working directory
 WORKDIR /app
@@ -13,6 +13,7 @@ RUN npm ci
 # Copy source code and TypeScript config
 COPY src/ ./src/
 COPY tsconfig.json ./
+COPY read-config.js ./
 
 # Build TypeScript
 RUN npm run build
