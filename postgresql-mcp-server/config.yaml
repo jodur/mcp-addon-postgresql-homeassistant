@@ -1,7 +1,7 @@
 # Home Assistant Addon Configuration
 name: "PostgreSQL MCP Server"
 description: "Model Context Protocol server for PostgreSQL database access with authentication"
-version: "1.3.2"
+version: "1.3.3"
 slug: "postgresql-mcp-server"
 url: "https://github.com/jodur/mcp-addon-postgresql-homeassistant"
 codenotary: "notary@home-assistant.io"

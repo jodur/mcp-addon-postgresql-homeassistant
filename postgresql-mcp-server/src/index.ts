@@ -68,7 +68,7 @@ async function initializeApp(): Promise<void> {
 function createMCPServer(): McpServer {
   const server = new McpServer({
     name: 'PostgreSQL MCP Server for Home Assistant',
-    version: '1.3.2',
+    version: '1.3.3',
   });
 
   // Register a sample query tool (SDK compliant)
@@ -204,7 +204,7 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     database: dbInitialized ? 'connected' : 'disconnected',
-    version: '1.3.2',
+    version: '1.3.3',
     sdk_compliant: true
   });
 });
@@ -238,7 +238,7 @@ app.post('/mcp', async (req, res) => {
         console.log(`✓ New MCP session initialized: ${sessionId}`);
       },
       enableDnsRebindingProtection: true,
-      allowedHosts: ['127.0.0.1', '192.168.39.5', 'localhost'],
+      allowedHosts: ['127.0.0.1', '192.168.39.5', '192.168.39.5:3001', 'localhost', 'localhost:3000', 'localhost:3001'],
     });
 
     // Clean up transport when closed
