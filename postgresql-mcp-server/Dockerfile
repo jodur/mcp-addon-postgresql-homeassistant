@@ -1,7 +1,7 @@
 FROM node:18-alpine
 
 # Install curl for health checks and jq for configuration parsing
-RUN apk add --no-cache curl jq
+RUN apk add --no-cache curl jq bash
 
 # Set working directory
 WORKDIR /app
@@ -38,5 +38,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 # Expose port
 EXPOSE 3000
 
-# Start the server
-CMD ["node", "dist/index.js"]
+# Copy the run script
+COPY run.sh /
+RUN chmod a+x /run.sh
+
+# Start the server using the run script
+CMD ["/run.sh"]
