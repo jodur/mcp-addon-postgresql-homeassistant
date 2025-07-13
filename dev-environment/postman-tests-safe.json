@@ -1,0 +1,123 @@
+{
+  "info": {
+    "name": "PostgreSQL MCP Server Tests",
+    "description": "Test collection for the PostgreSQL MCP Server with Home Assistant authentication",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "event": [],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "MCP Initialize",
+      "event": [],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_HOME_ASSISTANT_TOKEN_HERE"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"method\": \"initialize\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/mcp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["mcp"]
+        }
+      }
+    },
+    {
+      "name": "MCP Tools List",
+      "event": [],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_HOME_ASSISTANT_TOKEN_HERE"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"method\": \"tools/list\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/mcp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["mcp"]
+        }
+      }
+    },
+    {
+      "name": "MCP Resources List",
+      "event": [],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_HOME_ASSISTANT_TOKEN_HERE"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"method\": \"resources/list\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3000/mcp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["mcp"]
+        }
+      }
+    }
+  ]
+}
