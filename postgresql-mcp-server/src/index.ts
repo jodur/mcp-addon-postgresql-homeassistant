@@ -21,6 +21,24 @@ const ENABLE_WRITE_OPERATIONS = process.env.ENABLE_WRITE_OPERATIONS === 'true';
 const ALLOWED_USERS = process.env.ALLOWED_USERS ? process.env.ALLOWED_USERS.split(',') : [];
 const HA_BASE_URL = process.env.HA_BASE_URL || 'http://supervisor/core';
 
+// Log startup configuration (mask sensitive data)
+console.log('=== PostgreSQL MCP Server Configuration ===');
+console.log(`Server Port: ${PORT}`);
+console.log(`Log Level: ${LOG_LEVEL}`);
+console.log(`Database URL: ${DATABASE_URL ? '[CONFIGURED - ' + DATABASE_URL.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') + ']' : '[NOT SET]'}`);
+console.log(`Max Connections: ${MAX_CONNECTIONS}`);
+console.log(`Write Operations: ${ENABLE_WRITE_OPERATIONS ? 'ENABLED' : 'DISABLED'}`);
+console.log(`Allowed Users: ${ALLOWED_USERS.length ? ALLOWED_USERS.join(', ') : 'All authenticated users'}`);
+console.log(`Home Assistant URL: ${HA_BASE_URL}`);
+console.log('=== Environment Variables Debug ===');
+console.log(`SERVER_PORT env: ${process.env.SERVER_PORT || '[NOT SET]'}`);
+console.log(`DATABASE_URL env: ${process.env.DATABASE_URL ? '[SET]' : '[NOT SET]'}`);
+console.log(`LOG_LEVEL env: ${process.env.LOG_LEVEL || '[NOT SET]'}`);
+console.log(`MAX_CONNECTIONS env: ${process.env.MAX_CONNECTIONS || '[NOT SET]'}`);
+console.log(`ENABLE_WRITE_OPERATIONS env: ${process.env.ENABLE_WRITE_OPERATIONS || '[NOT SET]'}`);
+console.log(`HA_BASE_URL env: ${process.env.HA_BASE_URL || '[NOT SET]'}`);
+console.log('===========================================');
+
 // Create Express app
 const app = express();
 
@@ -58,14 +76,26 @@ async function initializeApp(): Promise<void> {
   try {
     // Initialize database
     if (DATABASE_URL) {
+      console.log('=== Database Initialization ===');
+      console.log(`Attempting to connect to database...`);
+      console.log(`Connection URL: ${DATABASE_URL.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`);
+      console.log(`Max Connections: ${MAX_CONNECTIONS}`);
+      
       await initializeDatabase(DATABASE_URL, MAX_CONNECTIONS);
       dbInitialized = true;
-      console.log('Database initialized successfully');
+      console.log('✓ Database initialized successfully');
+      console.log('================================');
     } else {
-      console.warn('DATABASE_URL not provided, database features will be disabled');
+      console.warn('⚠️  DATABASE_URL not provided, database features will be disabled');
+      console.warn('⚠️  Please set the database_url in addon configuration');
     }
 
     // Register MCP tools
+    console.log('=== MCP Tools Registration ===');
+    console.log(`Database URL: ${DATABASE_URL ? 'Configured' : 'Not configured'}`);
+    console.log(`Write Operations: ${ENABLE_WRITE_OPERATIONS ? 'Enabled' : 'Disabled'}`);
+    console.log(`Max Connections: ${MAX_CONNECTIONS}`);
+    
     await registerAllTools(mcpServer, {
       databaseUrl: DATABASE_URL,
       enableWriteOperations: ENABLE_WRITE_OPERATIONS,
@@ -73,9 +103,10 @@ async function initializeApp(): Promise<void> {
       maxConnections: MAX_CONNECTIONS
     });
 
-    console.log('MCP tools registered successfully');
+    console.log('✓ MCP tools registered successfully');
+    console.log('===============================');
   } catch (error) {
-    console.error('Failed to initialize app:', error);
+    console.error('❌ Failed to initialize app:', error);
     process.exit(1);
   }
 }
@@ -200,12 +231,28 @@ async function startServer(): Promise<void> {
     await initializeApp();
     
     app.listen(PORT, () => {
-      console.log(`PostgreSQL MCP Server started on port ${PORT}`);
-      console.log(`Health check: http://localhost:${PORT}/health`);
-      console.log(`MCP endpoint: http://localhost:${PORT}/mcp`);
-      console.log(`Database: ${dbInitialized ? 'Connected' : 'Disconnected'}`);
-      console.log(`Write operations: ${ENABLE_WRITE_OPERATIONS ? 'Enabled' : 'Disabled'}`);
-      console.log(`Allowed users: ${ALLOWED_USERS.length ? ALLOWED_USERS.join(', ') : 'All authenticated users'}`);
+      console.log('');
+      console.log('🚀 PostgreSQL MCP Server Successfully Started!');
+      console.log('==============================================');
+      console.log(`📍 Server URL: http://localhost:${PORT}`);
+      console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
+      console.log(`🔗 MCP Endpoint: http://localhost:${PORT}/mcp`);
+      console.log('');
+      console.log('📊 Current Configuration:');
+      console.log(`  🗄️  Database: ${dbInitialized ? '✅ Connected' : '❌ Disconnected'}`);
+      console.log(`  ✏️  Write Operations: ${ENABLE_WRITE_OPERATIONS ? '✅ Enabled' : '❌ Disabled'}`);
+      console.log(`  👥 Allowed Users: ${ALLOWED_USERS.length ? ALLOWED_USERS.join(', ') : '🌐 All authenticated users'}`);
+      console.log(`  🔗 Max Connections: ${MAX_CONNECTIONS}`);
+      console.log(`  📝 Log Level: ${LOG_LEVEL}`);
+      console.log(`  🏠 Home Assistant: ${HA_BASE_URL}`);
+      console.log('==============================================');
+      console.log('');
+      
+      if (!dbInitialized) {
+        console.log('⚠️  WARNING: Database not connected!');
+        console.log('   Please check your database_url configuration in the Home Assistant add-on settings.');
+        console.log('');
+      }
     });
   } catch (error) {
     console.error('Failed to start server:', error);

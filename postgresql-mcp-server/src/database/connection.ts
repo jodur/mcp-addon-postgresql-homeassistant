@@ -9,8 +9,20 @@ let pool: Pool | null = null;
 export async function initializeDatabase(databaseUrl: string, maxConnections: number = 10): Promise<void> {
   try {
     if (pool) {
+      console.log('Closing existing database pool...');
       await pool.end();
     }
+
+    // Parse URL for logging (without credentials)
+    const url = new URL(databaseUrl);
+    const maskedUrl = `${url.protocol}//${url.hostname}:${url.port}${url.pathname}`;
+    
+    console.log(`Creating database pool with:`);
+    console.log(`  Host: ${url.hostname}`);
+    console.log(`  Port: ${url.port || 5432}`);
+    console.log(`  Database: ${url.pathname.substring(1)}`);
+    console.log(`  Max Connections: ${maxConnections}`);
+    console.log(`  SSL Mode: ${databaseUrl.includes('sslmode=require') ? 'Required' : 'Disabled'}`);
 
     pool = new Pool({
       connectionString: databaseUrl,
@@ -20,14 +32,20 @@ export async function initializeDatabase(databaseUrl: string, maxConnections: nu
       ssl: databaseUrl.includes('sslmode=require') ? { rejectUnauthorized: false } : false
     });
 
-    // Test connection
+    // Test connection with detailed logging
+    console.log('Testing database connection...');
     const client = await pool.connect();
-    await client.query('SELECT 1');
+    const result = await client.query('SELECT version(), current_database(), current_user');
     client.release();
 
-    console.log('Database connection pool initialized successfully');
+    console.log('✓ Database connection successful!');
+    console.log(`  PostgreSQL Version: ${result.rows[0].version.split(' ')[1]}`);
+    console.log(`  Connected Database: ${result.rows[0].current_database}`);
+    console.log(`  Connected User: ${result.rows[0].current_user}`);
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    console.error('❌ Failed to initialize database connection:');
+    console.error(`  Error: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`  Full URL (masked): ${databaseUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`);
     throw error;
   }
 }
