@@ -21,6 +21,10 @@ RUN npm run build
 # Remove dev dependencies to reduce image size
 RUN npm ci --only=production && npm cache clean --force
 
+# Copy the run script and make it executable (before switching users)
+COPY run.sh /
+RUN chmod a+x /run.sh
+
 # Create non-root user (use available IDs)
 RUN addgroup -g 1001 mcpserver && \
     adduser -u 1001 -G mcpserver -s /bin/sh -D mcpserver
@@ -37,10 +41,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 
 # Expose port
 EXPOSE 3000
-
-# Copy the run script
-COPY run.sh /
-RUN chmod a+x /run.sh
 
 # Start the server using the run script
 CMD ["/run.sh"]
