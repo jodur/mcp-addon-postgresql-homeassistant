@@ -1,5 +1,26 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.3.0] - 2025-07-13
+
+### Added
+- SDK-compliant MCP server implementation using official @modelcontextprotocol/sdk
+- StreamableHTTPServerTransport for proper HTTP MCP protocol compliance
+- Proper tool registration with McpServer.registerTool() instead of manual handling
+- Enhanced authentication integration with Home Assistant tokens in SDK transport
+- Comprehensive testing infrastructure for development and validation
+- Zod schema validation for tool parameters
+- Session management with proper SDK patterns
+
+### Changed
+- Major architectural improvement: replaced custom Express MCP implementation with official SDK
+- Updated version to 1.3.0 for new SDK-compliant implementation
+- Improved MCP protocol compliance using StreamableHTTPServerTransport
+
+### Fixed
+- MCP protocol compliance issues with custom implementation
+- Tool registration not following SDK patterns
+- Session handling and transport layer improvements
+
 ## [1.2.1] - 2025-01-13
 
 ### Added

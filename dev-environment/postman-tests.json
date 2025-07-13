@@ -1,18 +1,20 @@
 {
   "info": {
     "name": "PostgreSQL MCP Server Tests",
+    "description": "Test collection for the PostgreSQL MCP Server with Home Assistant authentication",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
       "name": "Health Check",
+      "event": [],
       "request": {
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://192.168.39.5:3001/health",
+          "raw": "http://localhost:3000/health",
           "protocol": "http",
-          "host": ["192.168.39.5"],
+          "host": ["localhost"],
           "port": "3000",
           "path": ["health"]
         }
@@ -20,6 +22,7 @@
     },
     {
       "name": "MCP Initialize",
+      "event": [],
       "request": {
         "method": "POST",
         "header": [
@@ -29,7 +32,7 @@
           },
           {
             "key": "Authorization",
-            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJiZWVkMDZkODNjMWI0NDgyYjJlNTc1ZWRlZDIxMGNlNSIsImlhdCI6MTc1MjM5MDcyMiwiZXhwIjoyMDY3NzUwNzIyfQ.fnzjsA90LWYrAxBFlqZbdzoAlcQxo3iQVgXptlMzx8o"
+            "value": "Bearer YOUR_HOME_ASSISTANT_TOKEN_HERE"
           }
         ],
         "body": {
@@ -42,16 +45,17 @@
           }
         },
         "url": {
-          "raw": "http://localhost:3001/mcp",
+          "raw": "http://localhost:3000/mcp",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "3001",
+          "port": "3000",
           "path": ["mcp"]
         }
       }
     },
     {
       "name": "MCP Tools List",
+      "event": [],
       "request": {
         "method": "POST",
         "header": [
@@ -61,7 +65,7 @@
           },
           {
             "key": "Authorization",
-            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJiZWVkMDZkODNjMWI0NDgyYjJlNTc1ZWRlZDIxMGNlNSIsImlhdCI6MTc1MjM5MDcyMiwiZXhwIjoyMDY3NzUwNzIyfQ.fnzjsA90LWYrAxBFlqZbdzoAlcQxo3iQVgXptlMzx8o"
+            "value": "Bearer YOUR_HOME_ASSISTANT_TOKEN_HERE"
           }
         ],
         "body": {
@@ -74,16 +78,17 @@
           }
         },
         "url": {
-          "raw": "http://localhost:3001/mcp",
+          "raw": "http://localhost:3000/mcp",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "3001",
+          "port": "3000",
           "path": ["mcp"]
         }
       }
     },
     {
       "name": "MCP Resources List",
+      "event": [],
       "request": {
         "method": "POST",
         "header": [
@@ -93,7 +98,7 @@
           },
           {
             "key": "Authorization",
-            "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJiZWVkMDZkODNjMWI0NDgyYjJlNTc1ZWRlZDIxMGNlNSIsImlhdCI6MTc1MjM5MDcyMiwiZXhwIjoyMDY3NzUwNzIyfQ.fnzjsA90LWYrAxBFlqZbdzoAlcQxo3iQVgXptlMzx8o"
+            "value": "Bearer YOUR_HOME_ASSISTANT_TOKEN_HERE"
           }
         ],
         "body": {
@@ -106,10 +111,10 @@
           }
         },
         "url": {
-          "raw": "http://localhost:3001/mcp",
+          "raw": "http://localhost:3000/mcp",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "3001",
+          "port": "3000",
           "path": ["mcp"]
         }
       }

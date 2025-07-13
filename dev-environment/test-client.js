@@ -8,7 +8,8 @@
 const axios = require('axios');
 
 const BASE_URL = 'http://localhost:3000';
-const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJiZWVkMDZkODNjMWI0NDgyYjJlNTc1ZWRlZDIxMGNlNSIsImlhdCI6MTc1MjM5MDcyMiwiZXhwIjoyMDY3NzUwNzIyfQ.fnzjsA90LWYrAxBFlqZbdzoAlcQxo3iQVgXptlMzx8o';
+// TODO: Replace with your actual Home Assistant long-lived access token
+const AUTH_TOKEN = 'YOUR_HOME_ASSISTANT_TOKEN_HERE';
 
 class MCPTestClient {
   constructor() {
