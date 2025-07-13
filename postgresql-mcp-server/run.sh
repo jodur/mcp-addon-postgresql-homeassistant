@@ -40,4 +40,4 @@ bashio::log.info "Starting PostgreSQL MCP Server..."
 bashio::log.info "Node.js version: $(node --version)"
 bashio::log.info "Working directory: $(pwd)"
 
-exec node /app/dist/index-sdk-compliant.js
+exec node /app/dist/index.js
