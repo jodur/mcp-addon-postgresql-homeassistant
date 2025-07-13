@@ -1,0 +1,8 @@
+# Development Environment
+node_modules/
+dist/
+*.log
+.env
+
+# Keep .env.example
+!.env.example

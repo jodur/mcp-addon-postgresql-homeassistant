@@ -8,7 +8,7 @@ A Home Assistant addon that provides a Model Context Protocol (MCP) server for P
 - **🗄️ PostgreSQL Database Access**: Direct database connection for MCP tools
 - **🔐 Secure Authentication**: Validates Home Assistant API tokens
 - **🛡️ SQL Injection Protection**: Built-in query validation and sanitization
-- **⚙️ Configurable Permissions**: Role-based access control for database operations
+- **⚙️ Write Operation Control**: Enable/disable write operations via addon configuration
 - **🐳 Docker Support**: Packaged as a Home Assistant addon
 - **☁️ Cloudflare Tunnel Ready**: Designed to work with Home Assistant's cloudflare addon
 
@@ -29,7 +29,6 @@ Configure the addon through the Home Assistant UI:
 database_url: "postgresql://username:password@host:5432/database"
 server_port: 3000
 log_level: "info"
-allowed_users: []  # Empty array allows all authenticated users
 max_connections: 10
 enable_write_operations: false
 ha_base_url: "http://supervisor/core"  # Home Assistant API URL
@@ -42,16 +41,17 @@ The addon supports the following environment variables:
 - `DATABASE_URL`: PostgreSQL connection string
 - `SERVER_PORT`: Port for the MCP server (default: 3000)
 - `LOG_LEVEL`: Logging level (debug, info, warn, error)
-- `ALLOWED_USERS`: Comma-separated list of allowed usernames
 - `MAX_CONNECTIONS`: Maximum database connections
 - `ENABLE_WRITE_OPERATIONS`: Enable write operations (true/false)
 - `HA_BASE_URL`: Home Assistant API base URL (default: http://supervisor/core)
+
+**Note**: Authentication is service-based using Home Assistant's supervisor token. User-level access control is not applicable for MCP servers as they handle service-to-service communication.
 
 ## Usage
 
 ### Available MCP Tools
 
-#### 1. `listTables` (All Users)
+#### 1. `listTables`
 Lists all tables in the database with schema information.
 
 ```json
@@ -66,7 +66,7 @@ Lists all tables in the database with schema information.
 }
 ```
 
-#### 2. `queryDatabase` (All Users)
+#### 2. `queryDatabase`
 Execute read-only SQL queries.
 
 ```json
@@ -81,8 +81,8 @@ Execute read-only SQL queries.
 }
 ```
 
-#### 3. `executeDatabase` (Privileged Users)
-Execute write operations (INSERT, UPDATE, DELETE, DDL).
+#### 3. `executeDatabase`
+Execute write operations (INSERT, UPDATE, DELETE, DDL). Only available when `enable_write_operations` is set to `true` in addon configuration.
 
 ```json
 {
@@ -142,23 +142,139 @@ curl -X POST https://your-tunnel-domain.cloudflareaccess.com/mcp \
 
 The MCP server can be integrated with various AI tools and platforms that support the Model Context Protocol over HTTP endpoints.
 
+### Claude Desktop Integration via SuperGateway
+
+You can use this MCP server with Claude Desktop through [SuperGateway](https://github.com/supercorp-ai/supergateway), which provides a bridge between HTTP-based MCP servers and Claude Desktop's stdio-based MCP client.
+
+#### Setup Instructions:
+
+1. **Install SuperGateway:**
+   ```bash
+   npm install -g @supercorp-ai/supergateway
+   ```
+
+2. **Configure Claude Desktop:**
+   Add the following configuration to your Claude Desktop MCP settings file:
+
+   **On macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+   **On Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+   ```json
+   {
+     "mcpServers": {
+       "postgresql-ha": {
+         "command": "supergateway",
+         "args": [
+           "--url", "http://your-ha-instance:3000/mcp",
+           "--header", "Authorization: Bearer YOUR_HOME_ASSISTANT_TOKEN",
+           "--header", "Content-Type: application/json"
+         ]
+       }
+     }
+   }
+   ```
+
+3. **For Cloudflare Tunnel (HTTPS) access:**
+   ```json
+   {
+     "mcpServers": {
+       "postgresql-ha": {
+         "command": "supergateway",
+         "args": [
+           "--url", "https://your-tunnel-domain.cloudflareaccess.com/mcp",
+           "--header", "Authorization: Bearer YOUR_HOME_ASSISTANT_TOKEN",
+           "--header", "Content-Type: application/json"
+         ]
+       }
+     }
+   }
+   ```
+
+4. **Restart Claude Desktop** to load the new MCP server configuration.
+
+#### Usage in Claude Desktop:
+
+Once configured, you can use natural language commands in Claude Desktop like:
+
+- *"List all tables in the database"*
+- *"Show me the schema for the users table"*
+- *"Query the database to find all active users"*
+- *"Create a new table for storing product information"* (if write operations are enabled)
+
+#### Benefits of this Integration:
+
+- **🤖 Natural Language Interface**: Use conversational commands instead of JSON API calls
+- **🔄 Real-time Database Access**: Claude can directly query and analyze your PostgreSQL data
+- **🛡️ Secure Authentication**: All requests use your Home Assistant token for secure access
+- **☁️ Remote Access**: Works with both local and Cloudflare tunnel connections
+- **📊 Data Analysis**: Claude can perform complex analysis on your database contents
+
+#### Example Conversation:
+
+```
+You: "What tables are available in my database?"
+Claude: [Uses listTables tool] "I can see you have the following tables: users, products, orders, and logs. Would you like me to examine the schema of any specific table?"
+
+You: "Show me the structure of the users table"
+Claude: [Uses queryDatabase tool] "The users table has columns: id (primary key), username, email, created_at, and is_active. There are currently 150 users in the table."
+```
+
 ## Security
 
-### SQL Injection Protection
+### SQL Query Validation
 
-The server includes comprehensive SQL injection protection:
+The server includes basic SQL query validation designed for LLM-generated queries:
 
-- Pattern-based validation for dangerous SQL constructs
-- Parameterized query support
-- Operation type detection (read vs write)
-- Query sanitization
+- **Pattern-based validation** for obviously dangerous constructs (e.g., `xp_cmdshell`, malformed queries)
+- **Operation type detection** to distinguish read vs write operations
+- **Multiple statement prevention** to block query chaining
+- **Basic syntax validation** to catch malformed SQL
+
+**Important Security Notes:**
+
+⚠️ **This is NOT comprehensive SQL injection protection.** The validation is designed to:
+- Prevent accidental execution of dangerous administrative commands
+- Ensure write operations respect the `enable_write_operations` setting
+- Catch basic malformed queries from LLM generation errors
+
+⚠️ **Trust Model**: This MCP server assumes queries come from **trusted sources** (authenticated AI assistants, not untrusted user input). The validation primarily prevents:
+- Accidental destructive operations
+- LLM hallucinations that generate dangerous SQL patterns
+- Configuration errors (write ops when disabled)
+
+**For Production Use:**
+- Use database-level permissions to restrict what the connection user can access
+- Consider read-only database replicas for query-only operations
+- Monitor query logs for unexpected patterns
+- Implement network-level access controls
 
 ### Access Control
 
 - **Authentication**: All requests require valid Home Assistant tokens
-- **Authorization**: Write operations can be restricted to specific users
-- **Audit Logging**: All database operations are logged with user context
+- **Write Operations**: Controlled by the `enable_write_operations` addon setting
+- **Audit Logging**: All database operations are logged with request context
 - **Connection Limits**: Configurable connection pooling
+
+### Security Model & Trust Assumptions
+
+This MCP server is designed for **service-to-service communication** with AI assistants, not direct user input:
+
+**✅ Trusted Sources:**
+- Authenticated AI assistants (Claude, ChatGPT, etc.)
+- MCP clients with valid Home Assistant tokens
+- Automated tools using proper authentication
+
+**❌ NOT suitable for:**
+- Direct user SQL input without validation
+- Public-facing SQL interfaces
+- Untrusted third-party applications
+
+**Recommended Security Practices:**
+1. **Database Permissions**: Grant minimal necessary permissions to the PostgreSQL user
+2. **Network Security**: Use firewalls and VPNs to restrict database access
+3. **Monitoring**: Log and monitor all database operations
+4. **Separate Environments**: Use read-only replicas for query-heavy operations
+5. **Regular Updates**: Keep PostgreSQL and dependencies updated
 
 ## Development
 
@@ -250,7 +366,7 @@ ingress:
 1. **Connection refused**: Check if the addon is running and port is accessible
 2. **Authentication failed**: Verify Home Assistant token is valid
 3. **Database connection failed**: Check PostgreSQL connection string
-4. **Permission denied**: Ensure user has required permissions for write operations
+4. **Write operations disabled**: Ensure `enable_write_operations` is set to `true` in addon configuration if you need to execute write queries
 
 ### Logs
 

@@ -1,19 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserContext } from '../types';
 
-// Extend Express Request to include service context
+// Extend Express Request to include user context
 declare global {
   namespace Express {
     interface Request {
-      user?: UserContext; // Note: 'user' name kept for compatibility, but represents service context
+      user?: UserContext;
     }
   }
 }
 
 /**
- * Home Assistant authentication middleware for MCP servers
+ * Home Assistant authentication middleware
  * Validates the Bearer token against Home Assistant's API
- * Note: In MCP context, this validates the calling service, not individual users
  */
 export async function authenticateToken(
   req: Request,
@@ -224,12 +223,7 @@ function extractUserIdFromToken(token: string): string {
       throw new Error('Invalid JWT format');
     }
     
-    const base64Payload = parts[1];
-    if (!base64Payload) {
-      throw new Error('Missing JWT payload');
-    }
-    
-    const payload = JSON.parse(Buffer.from(base64Payload, 'base64url').toString());
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
     return payload.iss || 'unknown';
   } catch (error) {
     console.error('Error extracting user ID from token:', error);
@@ -274,33 +268,34 @@ async function fallbackTokenValidation(token: string): Promise<UserContext | nul
 }
 
 /**
- * Check if service has permission for write operations
- * For MCP servers with long-lived tokens, this is based on token validation and configuration
+ * Check if user has permission for write operations
  */
 export function hasWritePermission(user: UserContext): boolean {
+  const allowedUsers = process.env.ALLOWED_USERS ? process.env.ALLOWED_USERS.split(',') : [];
   const enableWriteOperations = process.env.ENABLE_WRITE_OPERATIONS === 'true';
   
   if (!enableWriteOperations) {
     return false;
   }
   
-  // For long-lived tokens in MCP context, if the token is valid and write ops are enabled,
-  // the service has write permissions
-  return true;
+  // If no specific users are configured, allow all authenticated users
+  if (allowedUsers.length === 0) {
+    return true;
+  }
+  
+  // Check if user is in allowed users list
+  return allowedUsers.includes(user.username) || allowedUsers.includes(user.userId);
 }
 
 /**
- * Check if service has admin permissions
- * For MCP servers with long-lived tokens, this is based on token validation
+ * Check if user has admin permissions
  */
 export function hasAdminPermission(user: UserContext): boolean {
-  // Long-lived tokens typically have admin privileges by default
   return user.isAdmin || user.permissions.includes('admin');
 }
 
 /**
- * Get service context from request
- * Note: Called 'getUserContext' for compatibility, but returns service context in MCP
+ * Get user context from request
  */
 export function getUserContext(req: Request): UserContext | null {
   return req.user || null;

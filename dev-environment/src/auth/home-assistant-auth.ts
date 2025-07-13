@@ -224,12 +224,7 @@ function extractUserIdFromToken(token: string): string {
       throw new Error('Invalid JWT format');
     }
     
-    const base64Payload = parts[1];
-    if (!base64Payload) {
-      throw new Error('Missing JWT payload');
-    }
-    
-    const payload = JSON.parse(Buffer.from(base64Payload, 'base64url').toString());
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
     return payload.iss || 'unknown';
   } catch (error) {
     console.error('Error extracting user ID from token:', error);

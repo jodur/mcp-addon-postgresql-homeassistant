@@ -1,22 +1,28 @@
 FROM node:18-alpine
 
+# Install curl for health checks
+RUN apk add --no-cache curl
+
 # Set working directory
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies (including dev dependencies for build)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
-# Copy source code
+# Copy source code and TypeScript config
 COPY src/ ./src/
 COPY tsconfig.json ./
 
 # Build TypeScript
-RUN npx tsc
+RUN npm run build
 
-# Create non-root user
-RUN addgroup -g 1000 mcpserver && \
-    adduser -u 1000 -G mcpserver -s /bin/sh -D mcpserver
+# Remove dev dependencies to reduce image size
+RUN npm ci --only=production && npm cache clean --force
+
+# Create non-root user (use available IDs)
+RUN addgroup -g 1001 mcpserver && \
+    adduser -u 1001 -G mcpserver -s /bin/sh -D mcpserver
 
 # Change ownership of app directory
 RUN chown -R mcpserver:mcpserver /app

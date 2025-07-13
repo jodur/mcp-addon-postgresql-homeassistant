@@ -41,7 +41,7 @@ tests/
 # Development tools
 .eslintrc*
 .prettierrc*
-tsconfig*.json
+# tsconfig*.json  # Commented out because Dockerfile needs tsconfig.json for building
 jest.config.*
 
 # Logs

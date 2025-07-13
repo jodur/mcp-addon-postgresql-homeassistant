@@ -20,7 +20,6 @@ options:
   database_url: "postgresql://username:password@host:5432/database"
   server_port: 3000
   log_level: "info"
-  allowed_users: []
   max_connections: 10
   enable_write_operations: false
   ha_base_url: "http://supervisor/core"
@@ -28,7 +27,6 @@ schema:
   database_url: "str"
   server_port: "int(1000,65535)"
   log_level: "list(debug|info|warn|error)"
-  allowed_users: ["str"]
   max_connections: "int(1,100)"
   enable_write_operations: "bool"
   ha_base_url: "str"

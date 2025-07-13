@@ -1,19 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserContext } from '../types';
 
-// Extend Express Request to include service context
+// Extend Express Request to include user context
 declare global {
   namespace Express {
     interface Request {
-      user?: UserContext; // Note: 'user' name kept for compatibility, but represents service context
+      user?: UserContext;
     }
   }
 }
 
 /**
- * Home Assistant authentication middleware for MCP servers
+ * Home Assistant authentication middleware
  * Validates the Bearer token against Home Assistant's API
- * Note: In MCP context, this validates the calling service, not individual users
  */
 export async function authenticateToken(
   req: Request,
@@ -55,14 +54,14 @@ export async function authenticateToken(
       return;
     }
 
-    // Attach user context to request
+    // Add user context to request
     req.user = userContext;
     next();
   } catch (error) {
     console.error('Authentication error:', error);
     res.status(500).json({
       success: false,
-      error: 'Internal server error during authentication',
+      error: 'Authentication service unavailable',
       timestamp: new Date().toISOString()
     });
   }
@@ -104,7 +103,7 @@ export async function validateHomeAssistantToken(token: string): Promise<UserCon
       clearTimeout(timeoutId);
 
       if (statesResponse.ok) {
-        const states = await statesResponse.json() as any[];
+        const states = await statesResponse.json();
         const personEntities = states.filter((s: any) => s.entity_id.startsWith('person.'));
         
         if (isDevelopment) {
@@ -147,19 +146,14 @@ export async function validateHomeAssistantToken(token: string): Promise<UserCon
       }
       
       // If states API fails, fall back to the original auth endpoint approach
-      const authController = new AbortController();
-      const authTimeoutId = setTimeout(() => authController.abort(), 5000);
-      
       const response = await fetch(`${haBaseUrl}/api/auth/check`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        signal: authController.signal
+        signal: controller.signal
       });
-
-      clearTimeout(authTimeoutId);
 
       if (isDevelopment) {
         console.log(`📊 HA Auth API Response: ${response.status} ${response.statusText}`);
@@ -224,16 +218,63 @@ function extractUserIdFromToken(token: string): string {
       throw new Error('Invalid JWT format');
     }
     
-    const base64Payload = parts[1];
-    if (!base64Payload) {
-      throw new Error('Missing JWT payload');
-    }
-    
-    const payload = JSON.parse(Buffer.from(base64Payload, 'base64url').toString());
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
     return payload.iss || 'unknown';
   } catch (error) {
     console.error('Error extracting user ID from token:', error);
     return 'unknown';
+  }
+}
+              console.log(`❌ Home Assistant API not reachable: ${healthResponse.status}`);
+            }
+          } catch (healthError) {
+            const errorMessage = healthError instanceof Error ? healthError.message : 'Unknown error';
+            console.log(`❌ Cannot reach Home Assistant: ${errorMessage}`);
+          }
+        }
+        
+        // If Home Assistant auth API is not available, implement fallback validation
+        return await fallbackTokenValidation(token);
+      }
+
+      const authData = await response.json() as any;
+      
+      if (isDevelopment) {
+        console.log(`✅ Home Assistant authentication successful`);
+        console.log(`👤 User data:`, authData);
+      }
+      
+      // Extract user information from Home Assistant response
+      return {
+        userId: authData?.id || authData?.user_id || 'ha-user',
+        username: authData?.name || authData?.username || 'homeassistant',
+        isAdmin: authData?.is_admin || authData?.admin || false,
+        permissions: authData?.permissions || ['read']
+      };
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      throw fetchError;
+    }
+  } catch (error) {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    if (isDevelopment) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('🔴 Token validation error:', errorMessage);
+      
+      if (error instanceof Error) {
+        console.log('📝 Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack?.substring(0, 200)
+        });
+      }
+    } else {
+      console.error('Token validation error:', error);
+    }
+    
+    // Fallback to basic token validation if Home Assistant API is unavailable
+    return await fallbackTokenValidation(token);
   }
 }
 
@@ -274,33 +315,34 @@ async function fallbackTokenValidation(token: string): Promise<UserContext | nul
 }
 
 /**
- * Check if service has permission for write operations
- * For MCP servers with long-lived tokens, this is based on token validation and configuration
+ * Check if user has permission for write operations
  */
 export function hasWritePermission(user: UserContext): boolean {
+  const allowedUsers = process.env.ALLOWED_USERS ? process.env.ALLOWED_USERS.split(',') : [];
   const enableWriteOperations = process.env.ENABLE_WRITE_OPERATIONS === 'true';
   
   if (!enableWriteOperations) {
     return false;
   }
   
-  // For long-lived tokens in MCP context, if the token is valid and write ops are enabled,
-  // the service has write permissions
-  return true;
+  // If no specific users are configured, allow all authenticated users
+  if (allowedUsers.length === 0) {
+    return true;
+  }
+  
+  // Check if user is in allowed users list
+  return allowedUsers.includes(user.username) || allowedUsers.includes(user.userId);
 }
 
 /**
- * Check if service has admin permissions
- * For MCP servers with long-lived tokens, this is based on token validation
+ * Check if user has admin permissions
  */
 export function hasAdminPermission(user: UserContext): boolean {
-  // Long-lived tokens typically have admin privileges by default
   return user.isAdmin || user.permissions.includes('admin');
 }
 
 /**
- * Get service context from request
- * Note: Called 'getUserContext' for compatibility, but returns service context in MCP
+ * Get user context from request
  */
 export function getUserContext(req: Request): UserContext | null {
   return req.user || null;

@@ -1,0 +1,44 @@
+{
+  "name": "mcp-postgres-dev",
+  "version": "1.0.0",
+  "description": "Development environment for PostgreSQL MCP Server",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc && concurrently \"tsc --watch\" \"nodemon dist/index.js\"",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist",
+    "test": "node test-server.js",
+    "test:auth": "node test-ha-auth.js",
+    "db:setup": "node setup-test-db.js",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "postgresql",
+    "development",
+    "testing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.0.13",
+    "@types/pg": "^8.15.4",
+    "concurrently": "^9.0.1",
+    "nodemon": "^3.1.9",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.15.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.0",
+    "pg": "^8.16.3",
+    "zod": "^3.25.76"
+  }
+}
