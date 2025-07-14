@@ -42,8 +42,17 @@ export async function authenticateToken(
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    
+    // Handle potential double Bearer prefix from gateway
+    const cleanToken = token.startsWith('Bearer ') ? token.substring(7) : token;
 
-    if (!token) {
+    if (isDebugMode) {
+      console.log(`🔍 Raw token: ${token.substring(0, 20)}...`);
+      console.log(`🧹 Clean token: ${cleanToken.substring(0, 20)}...`);
+      console.log(`🔧 Double Bearer detected: ${token.startsWith('Bearer ') ? 'YES' : 'NO'}`);
+    }
+
+    if (!cleanToken) {
       if (isDebugMode) {
         console.log('❌ Authentication failed: Empty token');
       }
@@ -56,7 +65,7 @@ export async function authenticateToken(
     }
 
     // Validate token with Home Assistant API
-    const userContext = await validateHomeAssistantToken(token);
+    const userContext = await validateHomeAssistantToken(cleanToken);
 
     if (!userContext) {
       if (isDebugMode) {
@@ -108,7 +117,7 @@ export async function validateHomeAssistantToken(token: string): Promise<UserCon
     const haBaseUrl = process.env.HA_BASE_URL || 'http://supervisor/core';
     
     if (isDebugMode) {
-      console.log(` HA Base URL: ${haBaseUrl}`);
+      console.log(`📡 HA Base URL: ${haBaseUrl}`);
       console.log(`🔑 Token: ${token.substring(0, 10)}...`);
       console.log(`🚀 Attempting to connect to Home Assistant API...`);
     }

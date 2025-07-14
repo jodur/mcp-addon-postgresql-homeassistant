@@ -1,5 +1,17 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.3] - 2025-07-14
+
+### Fixed
+- **CRITICAL**: Fixed double Bearer prefix issue causing authentication failures
+- Added robust token cleaning to handle gateway-added Bearer prefixes
+- Enhanced debug logging to show token processing steps
+- Fixed character encoding issue in HA Base URL logging
+
+### Improved
+- Better error handling for malformed tokens
+- Enhanced debugging output for authentication troubleshooting
+
 ## [1.4.2] - 2025-07-14
 
 ### Security
