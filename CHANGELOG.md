@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.5] - 2025-07-14
+
+### Fixed
+- **CRITICAL**: Simplified authentication to use token format validation for add-on context
+- Removed complex API endpoint validation that was failing in add-on environment
+- Fixed authentication to work with Home Assistant add-on network limitations
+- Enhanced token format validation for JWT and long-lived tokens
+
+### Improved
+- More reliable authentication for add-on deployment
+- Better debug logging for token validation process
+- Simplified validation approach suitable for secure add-on environment
+
+### Changed
+- **BREAKING**: Switched to simplified token validation appropriate for add-on context
+- Removed external API dependency for token validation
+
 ## [1.4.4] - 2025-07-14
 
 ### Fixed
