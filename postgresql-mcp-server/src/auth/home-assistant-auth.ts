@@ -121,27 +121,141 @@ export async function validateHomeAssistantToken(token: string): Promise<UserCon
       console.log(`🔍 Token pattern: ${/^[a-zA-Z0-9._-]+$/.test(token) ? 'Valid format' : 'Invalid format'}`);
     }
     
-    // Simple token validation - if it's a well-formed token, accept it
-    // This is appropriate for add-on context where network access might be limited
-    if (token.length >= 20 && /^[a-zA-Z0-9._-]+$/.test(token)) {
+    // SECURITY: Must validate token against Home Assistant API
+    // Format validation alone is NOT sufficient for security
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    try {
+      // Method 1: Try Home Assistant config endpoint (most permissive)
       if (isDebugMode) {
-        console.log('✅ Token format validation passed');
-        console.log('🔧 Using simplified validation for add-on context');
+        console.log('🔐 Attempting Home Assistant API validation...');
       }
       
-      return {
-        userId: 'homeassistant-service',
-        username: 'homeassistant',
-        isAdmin: true,
-        permissions: ['read', 'write', 'admin']
-      };
+      const configResponse = await fetch(`${haBaseUrl}/api/config`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      
+      if (isDebugMode) {
+        console.log(`📈 Config API response: ${configResponse.status} ${configResponse.statusText}`);
+      }
+
+      if (configResponse.ok) {
+        const configData = await configResponse.json() as any;
+        
+        if (isDebugMode) {
+          console.log(`✅ Home Assistant API validation successful`);
+          console.log(`🏠 HA Version: ${configData.version || 'Unknown'}`);
+        }
+        
+        return {
+          userId: 'homeassistant-service',
+          username: 'homeassistant',
+          isAdmin: true,
+          permissions: ['read', 'write', 'admin']
+        };
+      }
+
+      // Method 2: Try states endpoint as fallback
+      if (isDebugMode) {
+        console.log('🔄 Config API failed, trying states API...');
+      }
+      
+      const statesController = new AbortController();
+      const statesTimeoutId = setTimeout(() => statesController.abort(), 5000);
+      
+      const statesResponse = await fetch(`${haBaseUrl}/api/states`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        signal: statesController.signal
+      });
+
+      clearTimeout(statesTimeoutId);
+      
+      if (isDebugMode) {
+        console.log(`📈 States API response: ${statesResponse.status} ${statesResponse.statusText}`);
+      }
+
+      if (statesResponse.ok) {
+        const states = await statesResponse.json() as any[];
+        
+        if (isDebugMode) {
+          console.log(`✅ States API validation successful`);
+          console.log(`📊 Found ${states.length} entities`);
+        }
+        
+        return {
+          userId: 'homeassistant-service',
+          username: 'homeassistant',
+          isAdmin: true,
+          permissions: ['read', 'write', 'admin']
+        };
+      }
+
+      // Method 3: Try auth endpoint
+      if (isDebugMode) {
+        console.log('� States API failed, trying auth endpoint...');
+      }
+      
+      const authController = new AbortController();
+      const authTimeoutId = setTimeout(() => authController.abort(), 5000);
+      
+      const authResponse = await fetch(`${haBaseUrl}/api/auth/check`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        signal: authController.signal
+      });
+
+      clearTimeout(authTimeoutId);
+      
+      if (isDebugMode) {
+        console.log(`📈 Auth API response: ${authResponse.status} ${authResponse.statusText}`);
+      }
+
+      if (authResponse.ok) {
+        const authData = await authResponse.json() as any;
+        
+        if (isDebugMode) {
+          console.log(`✅ Auth API validation successful`);
+        }
+        
+        return {
+          userId: authData?.id || authData?.user_id || 'homeassistant-service',
+          username: authData?.name || authData?.username || 'homeassistant',
+          isAdmin: authData?.is_admin || authData?.admin || true,
+          permissions: authData?.permissions || ['read', 'write', 'admin']
+        };
+      }
+
+      if (isDebugMode) {
+        console.log('❌ All Home Assistant API validation methods failed');
+      }
+      
+      return null;
+      
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      
+      if (isDebugMode) {
+        console.error('🔴 Home Assistant API validation error:', fetchError);
+      }
+      
+      return null;
     }
-    
-    if (isDebugMode) {
-      console.log('❌ Token format validation failed');
-    }
-    
-    return null;
   } catch (error) {
     if (isDebugMode) {
       console.error('🔴 Token validation error:', error);

@@ -1,5 +1,18 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.6] - 2025-07-14
+
+### Security
+- **CRITICAL**: Fixed authentication security vulnerability that accepted any well-formatted token
+- Restored proper Home Assistant API validation for tokens
+- Authentication now requires valid token validation against Home Assistant API endpoints
+- Added multi-endpoint validation (config, states, auth endpoints) for reliable token verification
+
+### Fixed
+- Token validation now properly rejects invalid tokens
+- Improved error handling for authentication failures
+- Enhanced debug logging for authentication process
+
 ## [1.4.5] - 2025-07-14
 
 ### Fixed
