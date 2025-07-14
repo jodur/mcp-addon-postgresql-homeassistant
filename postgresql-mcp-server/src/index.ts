@@ -69,7 +69,7 @@ async function initializeApp(): Promise<void> {
 function createMCPServer(): McpServer {
   const server = new McpServer({
     name: 'PostgreSQL MCP Server for Home Assistant',
-    version: '1.3.6',
+    version: '1.4.1',
   });
 
   // Create configuration object for database tools
@@ -163,7 +163,7 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     database: dbInitialized ? 'connected' : 'disconnected',
-    version: '1.3.6',
+    version: '1.4.1',
     sdk_compliant: true
   });
 });

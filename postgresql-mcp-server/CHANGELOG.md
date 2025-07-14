@@ -1,5 +1,17 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.1] - 2025-07-14
+
+### Removed
+- Removed unused scripts folder and broken test script reference from package.json
+- Removed unnecessary root .env.example file (dev-environment has its own)
+- Removed empty init-db.sql file
+
+### Improved
+- Cleaned up project structure for better maintainability
+- Removed redundant files that were not used by the Home Assistant addon
+- Focused project on core Home Assistant addon functionality
+
 ## [1.3.6] - 2025-07-13
 
 ### Fixed

@@ -15,12 +15,7 @@
    - ✅ Updated `UserContext` interface comments to reflect service context
    - ✅ Clarified that it represents service authentication, not user sessions
 
-3. **`.env.example`**
-   - ✅ Removed `ALLOWED_USERS` configuration
-   - ✅ Updated comments to reflect service-based authentication
-   - ✅ Set NODE_ENV to production for addon context
-
-4. **`config.yaml`**
+3. **`config.yaml`**
    - ✅ Removed `allowed_users` option from addon configuration
    - ✅ Removed `allowed_users` from schema validation
    - ✅ Simplified configuration for MCP service model

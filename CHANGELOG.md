@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2025-07-14
+
+### Removed
+- Removed unused `scripts/` folder and broken test script reference
+- Removed unnecessary root `.env.example` file (dev-environment has its own)
+- Removed empty `init-db.sql` file
+
+### Improved
+- Cleaned up project structure for better maintainability
+- Removed redundant files that were not used by the Home Assistant addon
+- Updated documentation to reflect current project structure
+
 ## [1.3.2] - 2025-07-13
 
 ### Changed
