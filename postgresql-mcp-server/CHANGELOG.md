@@ -1,5 +1,23 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.2] - 2025-07-14
+
+### Security
+- **CRITICAL**: Fixed authentication bypass vulnerability that allowed invalid tokens through Cloudflare tunnels
+- Removed insecure fallback authentication that could be exploited
+- Enforced strict Home Assistant API validation for all authentication requests
+
+### Improved
+- Removed unnecessary JWT parsing for long-lived tokens (performance optimization)
+- Added comprehensive debug logging that only activates when `LOG_LEVEL=debug`
+- Simplified authentication flow for better security and performance
+- Enhanced error handling with better user feedback
+
+### Removed
+- Removed `extractUserIdFromToken` function (not needed for long-lived tokens)
+- Removed `fallbackTokenValidation` function (security vulnerability)
+- Removed development mode authentication bypasses
+
 ## [1.4.1] - 2025-07-14
 
 ### Removed

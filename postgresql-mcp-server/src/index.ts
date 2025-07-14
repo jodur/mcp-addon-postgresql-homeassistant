@@ -23,12 +23,28 @@ const ENABLE_WRITE_OPERATIONS = process.env.ENABLE_WRITE_OPERATIONS === 'true';
 const ALLOWED_USERS = process.env.ALLOWED_USERS ? process.env.ALLOWED_USERS.split(',') : [];
 const HA_BASE_URL = process.env.HA_BASE_URL || 'http://supervisor/core';
 
+// Debug mode helper
+const isDebugMode = LOG_LEVEL === 'debug';
+
 // Log startup configuration
 console.log('=== PostgreSQL MCP Server (SDK Compliant) ===');
 console.log(`Server Port: ${PORT}`);
 console.log(`Database URL: ${DATABASE_URL ? '[CONFIGURED]' : '[NOT SET]'}`);
 console.log(`Write Operations: ${ENABLE_WRITE_OPERATIONS ? 'ENABLED' : 'DISABLED'}`);
 console.log(`Home Assistant URL: ${HA_BASE_URL}`);
+console.log(`Log Level: ${LOG_LEVEL}`);
+console.log(`Max Connections: ${MAX_CONNECTIONS}`);
+console.log(`Allowed Users: ${ALLOWED_USERS.length ? ALLOWED_USERS.join(', ') : '[ALL AUTHENTICATED]'}`);
+console.log(`Node Environment: ${process.env.NODE_ENV || 'production'}`);
+
+if (isDebugMode) {
+  console.log('');
+  console.log('🔐 Authentication Configuration:');
+  console.log(`  📡 HA Base URL: ${HA_BASE_URL}`);
+  console.log(`  🔧 Development Mode: ${process.env.NODE_ENV === 'development' ? 'YES' : 'NO'}`);
+  console.log(`  🔒 Security: ${process.env.NODE_ENV === 'development' ? 'RELAXED' : 'STRICT'}`);
+  console.log(`  ⏱️  Token Timeout: 5 seconds`);
+}
 console.log('============================================');
 
 // Create Express app
@@ -46,6 +62,18 @@ app.use(express.json({ limit: '10mb' }));
 
 // Store transports by session ID
 const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+
+// Authentication tracking
+let authAttempts = 0;
+let authSuccesses = 0;
+let authFailures = 0;
+
+// Helper function for debug logging
+function debugLog(message: string, ...args: any[]) {
+  if (isDebugMode) {
+    console.log(message, ...args);
+  }
+}
 
 // Initialize database
 let dbInitialized = false;
@@ -69,7 +97,7 @@ async function initializeApp(): Promise<void> {
 function createMCPServer(): McpServer {
   const server = new McpServer({
     name: 'PostgreSQL MCP Server for Home Assistant',
-    version: '1.4.1',
+    version: '1.4.2',
   });
 
   // Create configuration object for database tools
@@ -163,21 +191,66 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     database: dbInitialized ? 'connected' : 'disconnected',
-    version: '1.4.1',
-    sdk_compliant: true
+    version: '1.4.2',
+    sdk_compliant: true,
+    auth_stats: {
+      total_attempts: authAttempts,
+      successful: authSuccesses,
+      failed: authFailures,
+      success_rate: authAttempts > 0 ? ((authSuccesses / authAttempts) * 100).toFixed(1) + '%' : '0%'
+    },
+    active_sessions: Object.keys(transports).length
   });
 });
 
 // MCP endpoint with proper SDK transport
 app.post('/mcp', async (req, res) => {
+  const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+  const userAgent = req.get('User-Agent') || 'unknown';
+  const authHeader = req.headers.authorization;
+  
+  authAttempts++;
+  
+  if (isDebugMode) {
+    console.log('');
+    console.log('🔐 === MCP Authentication Request ===');
+    console.log(`📊 Attempt #${authAttempts} (Success: ${authSuccesses}, Failed: ${authFailures})`);
+    console.log(`📍 Client IP: ${clientIp}`);
+    console.log(`🌐 User Agent: ${userAgent}`);
+    console.log(`🔑 Auth Header: ${authHeader ? `Bearer ${authHeader.substring(7, 17)}...` : 'MISSING'}`);
+    console.log(`📋 Request Method: ${req.method}`);
+    console.log(`🎯 Endpoint: ${req.path}`);
+    console.log('=====================================');
+  }
+
   // Home Assistant authentication middleware
   const authResult = await new Promise<boolean>((resolve) => {
     authenticateToken(req, res, (error?: any) => {
+      if (error) {
+        authFailures++;
+        if (isDebugMode) {
+          console.log(`❌ Authentication failed (${authFailures}/${authAttempts}):`, error.message || error);
+        }
+      } else {
+        authSuccesses++;
+        if (isDebugMode) {
+          console.log(`✅ Authentication successful (${authSuccesses}/${authAttempts})`);
+          if (req.user) {
+            console.log(`👤 User Context: ${req.user.username} (${req.user.userId})`);
+            console.log(`🔓 Permissions: ${req.user.permissions.join(', ')}`);
+            console.log(`👑 Admin: ${req.user.isAdmin ? 'YES' : 'NO'}`);
+          }
+        }
+      }
+      if (isDebugMode) {
+        console.log('=====================================');
+      }
       resolve(!error);
     });
   });
 
   if (!authResult) {
+    debugLog('🚫 Request rejected due to authentication failure');
     return; // Response already sent by auth middleware
   }
 
@@ -185,16 +258,25 @@ app.post('/mcp', async (req, res) => {
   const sessionId = req.headers['mcp-session-id'] as string | undefined;
   let transport: StreamableHTTPServerTransport;
 
+  if (isDebugMode) {
+    console.log('🔗 === MCP Session Management ===');
+    console.log(`📋 Session ID: ${sessionId || 'NEW SESSION'}`);
+    console.log(`🔍 Existing Sessions: ${Object.keys(transports).length}`);
+  }
+
   if (sessionId && transports[sessionId]) {
     // Reuse existing transport
     transport = transports[sessionId];
+    debugLog(`♻️  Reusing existing session: ${sessionId}`);
   } else if (!sessionId && isInitializeRequest(req.body)) {
     // New initialization request
+    debugLog('🆕 Creating new MCP session...');
     transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (sessionId) => {
         transports[sessionId] = transport;
         console.log(`✓ New MCP session initialized: ${sessionId}`);
+        debugLog(`📊 Total active sessions: ${Object.keys(transports).length}`);
       },
       enableDnsRebindingProtection: false,
     });
@@ -203,14 +285,16 @@ app.post('/mcp', async (req, res) => {
     transport.onclose = () => {
       if (transport.sessionId) {
         console.log(`✓ MCP session closed: ${transport.sessionId}`);
-        delete transports[transport.sessionId];
+        debugLog(`📊 Remaining active sessions: ${Object.keys(transports).length}`);
       }
     };
 
     const server = createMCPServer();
     await server.connect(transport);
+    debugLog('🔌 MCP server connected to transport');
   } else {
     // Invalid request
+    debugLog('❌ Invalid MCP request - no session ID and not an initialize request');
     res.status(400).json({
       jsonrpc: '2.0',
       error: {
@@ -220,6 +304,11 @@ app.post('/mcp', async (req, res) => {
       id: null,
     });
     return;
+  }
+
+  if (isDebugMode) {
+    console.log('===============================');
+    console.log('');
   }
 
   // Handle the request using SDK transport
@@ -283,6 +372,9 @@ async function startServer(): Promise<void> {
       console.log(`  📝 Log Level: ${LOG_LEVEL}`);
       console.log(`  🏠 Home Assistant: ${HA_BASE_URL}`);
       console.log(`  🛠️  SDK Compliant: ✅ YES`);
+      if (isDebugMode) {
+        console.log(`  📊 Auth Stats: ${authSuccesses} success, ${authFailures} failed, ${authAttempts} total`);
+      }
       console.log('================================================');
       console.log('');
     });
