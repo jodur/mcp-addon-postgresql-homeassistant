@@ -1,22 +1,5 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
-## [1.4.0] - 2025-07-14
-
-### Added
-- Added addon icon.png for better visual identification in Home Assistant UI
-- Added comprehensive VS Code MCP setup documentation (VS_CODE_SETUP.md)
-- Added VS Code MCP configuration files for easy setup
-- Added version update checklist for maintainers
-
-### Improved
-- Enhanced documentation for VS Code integration
-- Streamlined development workflow with configuration templates
-
-### Verified
-- Tested with TimescaleDB hypertables (16M+ records)
-- Confirmed comprehensive database tools working correctly
-- VS Code MCP integration functional
-
 ## [1.3.6] - 2025-07-13
 
 ### Fixed
