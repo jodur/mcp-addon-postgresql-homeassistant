@@ -19,6 +19,10 @@ export MAX_CONNECTIONS
 export ENABLE_WRITE_OPERATIONS
 export HA_BASE_URL
 
+# Export Home Assistant add-on environment variables
+export SUPERVISOR_TOKEN
+export HASSIO_TOKEN
+
 # Debug logging
 bashio::log.info "Configuration loaded:"
 bashio::log.info "  DATABASE_URL: ${DATABASE_URL:+[SET - $(echo $DATABASE_URL | sed 's/.*@/***@/')]}${DATABASE_URL:-[NOT SET]}"
@@ -27,6 +31,8 @@ bashio::log.info "  LOG_LEVEL: $LOG_LEVEL"
 bashio::log.info "  MAX_CONNECTIONS: $MAX_CONNECTIONS"
 bashio::log.info "  ENABLE_WRITE_OPERATIONS: $ENABLE_WRITE_OPERATIONS"
 bashio::log.info "  HA_BASE_URL: $HA_BASE_URL"
+bashio::log.info "  SUPERVISOR_TOKEN: ${SUPERVISOR_TOKEN:+[SET]}${SUPERVISOR_TOKEN:-[NOT SET]}"
+bashio::log.info "  HASSIO_TOKEN: ${HASSIO_TOKEN:+[SET]}${HASSIO_TOKEN:-[NOT SET]}"
 
 # Validate required configuration
 if bashio::var.is_empty "${DATABASE_URL}"; then

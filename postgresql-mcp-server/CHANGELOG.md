@@ -1,5 +1,19 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.4] - 2025-07-14
+
+### Fixed
+- **CRITICAL**: Fixed Home Assistant add-on authentication to use proper HA add-on communication patterns
+- Implemented multi-method authentication validation (auth endpoint, states API, supervisor API)
+- Added SUPERVISOR_TOKEN and HASSIO_TOKEN environment variable support
+- Fixed authentication flow to follow Home Assistant add-on development guidelines
+- Enhanced debug logging for supervisor token availability
+
+### Improved
+- Better error handling for different authentication methods
+- Comprehensive authentication fallback system
+- Enhanced debugging for add-on communication troubleshooting
+
 ## [1.4.3] - 2025-07-14
 
 ### Fixed

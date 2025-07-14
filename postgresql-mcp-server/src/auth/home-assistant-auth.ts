@@ -113,13 +113,15 @@ export async function validateHomeAssistantToken(token: string): Promise<UserCon
   }
   
   try {
-    // Get Home Assistant base URL from environment
+    // For Home Assistant add-ons, use Supervisor API for authentication
+    const supervisorToken = process.env.SUPERVISOR_TOKEN;
     const haBaseUrl = process.env.HA_BASE_URL || 'http://supervisor/core';
     
     if (isDebugMode) {
       console.log(`📡 HA Base URL: ${haBaseUrl}`);
       console.log(`🔑 Token: ${token.substring(0, 10)}...`);
-      console.log(`🚀 Attempting to connect to Home Assistant API...`);
+      console.log(`� Supervisor Token: ${supervisorToken ? 'Available' : 'Not available'}`);
+      console.log(`�🚀 Attempting to validate token with Home Assistant...`);
     }
     
     // Create AbortController for timeout
@@ -127,12 +129,12 @@ export async function validateHomeAssistantToken(token: string): Promise<UserCon
     const timeoutId = setTimeout(() => controller.abort(), 5000);
     
     try {
-      // Try to validate token using the states API
+      // Method 1: Try to validate token using Home Assistant's auth endpoint
       if (isDebugMode) {
-        console.log('📊 Trying states API endpoint...');
+        console.log('📊 Trying HA auth validation endpoint...');
       }
       
-      const statesResponse = await fetch(`${haBaseUrl}/api/states`, {
+      const authResponse = await fetch(`${haBaseUrl}/api/auth/check`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -144,17 +146,56 @@ export async function validateHomeAssistantToken(token: string): Promise<UserCon
       clearTimeout(timeoutId);
       
       if (isDebugMode) {
-        console.log(`📈 States API response: ${statesResponse.status} ${statesResponse.statusText}`);
+        console.log(`📈 Auth API response: ${authResponse.status} ${authResponse.statusText}`);
+      }
+
+      if (authResponse.ok) {
+        const authData = await authResponse.json() as any;
+        
+        if (isDebugMode) {
+          console.log(`✅ Home Assistant auth successful`);
+          console.log(`👤 Auth data:`, authData);
+        }
+        
+        return {
+          userId: authData?.id || authData?.user_id || 'homeassistant-service',
+          username: authData?.name || authData?.username || 'homeassistant',
+          isAdmin: authData?.is_admin || authData?.admin || true,
+          permissions: authData?.permissions || ['read', 'write', 'admin']
+        };
+      }
+      
+      // Method 2: If auth endpoint fails, try states API as fallback
+      if (isDebugMode) {
+        console.log('🔄 Auth endpoint failed, trying states API...');
+      }
+      
+      const statesController = new AbortController();
+      const statesTimeoutId = setTimeout(() => statesController.abort(), 5000);
+      
+      const statesResponse = await fetch(`${haBaseUrl}/api/states`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        signal: statesController.signal
+      });
+
+      clearTimeout(statesTimeoutId);
+      
+      if (isDebugMode) {
+        console.log(`� States API response: ${statesResponse.status} ${statesResponse.statusText}`);
       }
 
       if (statesResponse.ok) {
         const states = await statesResponse.json() as any[];
         
         if (isDebugMode) {
-          console.log(`✅ Home Assistant API accessible with ${states.length} entities`);
+          console.log(`✅ States API accessible with ${states.length} entities`);
         }
         
-        // For long-lived tokens, we just need to verify the token works
+        // Token is valid - return service context
         return {
           userId: 'homeassistant-service',
           username: 'homeassistant',
@@ -163,49 +204,59 @@ export async function validateHomeAssistantToken(token: string): Promise<UserCon
         };
       }
       
-      // If states API fails, try auth endpoint
-      if (isDebugMode) {
-        console.log('🔄 States API failed, trying auth endpoint...');
-      }
-      
-      const authController = new AbortController();
-      const authTimeoutId = setTimeout(() => authController.abort(), 5000);
-      
-      const response = await fetch(`${haBaseUrl}/api/auth/check`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        signal: authController.signal
-      });
+      // Method 3: If both fail, try using Supervisor token for validation
+      if (supervisorToken && isDebugMode) {
+        console.log('🔄 Trying Supervisor API validation...');
+        
+        const supervisorController = new AbortController();
+        const supervisorTimeoutId = setTimeout(() => supervisorController.abort(), 5000);
+        
+        try {
+          const supervisorResponse = await fetch(`http://supervisor/auth`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${supervisorToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              'access_token': token
+            }),
+            signal: supervisorController.signal
+          });
 
-      clearTimeout(authTimeoutId);
-      
-      if (isDebugMode) {
-        console.log(`📊 HA Auth API Response: ${response.status} ${response.statusText}`);
-      }
+          clearTimeout(supervisorTimeoutId);
+          
+          if (isDebugMode) {
+            console.log(`📈 Supervisor auth response: ${supervisorResponse.status} ${supervisorResponse.statusText}`);
+          }
 
-      if (!response.ok) {
-        if (isDebugMode) {
-          console.log(`⚠️  Home Assistant auth API failed (${response.status})`);
+          if (supervisorResponse.ok) {
+            const supervisorData = await supervisorResponse.json() as any;
+            
+            if (isDebugMode) {
+              console.log(`✅ Supervisor validation successful`);
+              console.log(`👤 Supervisor data:`, supervisorData);
+            }
+            
+            return {
+              userId: supervisorData?.user_id || 'homeassistant-service',
+              username: supervisorData?.username || 'homeassistant',
+              isAdmin: true,
+              permissions: ['read', 'write', 'admin']
+            };
+          }
+        } catch (supervisorError) {
+          if (isDebugMode) {
+            console.log(`⚠️  Supervisor validation failed:`, supervisorError);
+          }
         }
-        return null;
       }
-
-      const authData = await response.json() as any;
       
       if (isDebugMode) {
-        console.log(`✅ Home Assistant authentication successful`);
-        console.log(`👤 User data:`, authData);
+        console.log(`❌ All authentication methods failed`);
       }
       
-      return {
-        userId: authData?.id || authData?.user_id || 'homeassistant-service',
-        username: authData?.name || authData?.username || 'homeassistant',
-        isAdmin: authData?.is_admin || authData?.admin || true,
-        permissions: authData?.permissions || ['read', 'write', 'admin']
-      };
+      return null;
       
     } catch (fetchError) {
       clearTimeout(timeoutId);
