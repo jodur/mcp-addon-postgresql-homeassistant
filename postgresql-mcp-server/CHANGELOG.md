@@ -1,5 +1,19 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.8] - 2025-07-15
+
+### Fixed
+- **AUTHENTICATION**: Fixed Home Assistant API URL handling for token validation
+- Corrected hostname from `homeAssistant` to `homeassistant` (lowercase) for proper internal network communication
+- Fixed double `/api` path issue in URL construction
+- Added proper trailing slash removal for clean URLs
+- Token validation now uses direct connection to Home Assistant Core over internal network
+
+### Improved
+- Better URL sanitization and handling
+- Enhanced debug logging for authentication troubleshooting
+- More robust token validation endpoint selection
+
 ## [1.4.7] - 2025-07-15
 
 ### Fixed

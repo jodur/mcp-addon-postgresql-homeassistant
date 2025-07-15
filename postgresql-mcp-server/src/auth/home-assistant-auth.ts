@@ -99,7 +99,17 @@ export async function validateHomeAssistantToken(token: string): Promise<boolean
   const isDebugMode = process.env.LOG_LEVEL === 'debug';
   
   try {
-    const haBaseUrl = process.env.HA_BASE_URL || 'http://supervisor/core';
+    let haBaseUrl = process.env.HA_BASE_URL || 'http://homeassistant:8123';
+    
+    // Remove trailing /api if present to avoid double /api/api/config
+    if (haBaseUrl.endsWith('/api')) {
+      haBaseUrl = haBaseUrl.slice(0, -4);
+    }
+    
+    // Remove trailing slash
+    if (haBaseUrl.endsWith('/')) {
+      haBaseUrl = haBaseUrl.slice(0, -1);
+    }
     
     if (isDebugMode) {
       console.log(`🔑 Validating token with Home Assistant API: ${haBaseUrl}`);
@@ -119,6 +129,9 @@ export async function validateHomeAssistantToken(token: string): Promise<boolean
     
     if (isDebugMode) {
       console.log(`📈 Token validation result: ${isValid ? 'VALID' : 'INVALID'} (${response.status})`);
+      if (!isValid) {
+        console.log(`🔍 Full URL attempted: ${haBaseUrl}/api/config`);
+      }
     }
 
     return isValid;
