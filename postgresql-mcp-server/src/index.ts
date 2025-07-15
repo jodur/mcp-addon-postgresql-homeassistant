@@ -20,6 +20,7 @@ const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
 const DATABASE_URL = process.env.DATABASE_URL || '';
 const MAX_CONNECTIONS = process.env.MAX_CONNECTIONS ? parseInt(process.env.MAX_CONNECTIONS) : 10;
 const ENABLE_WRITE_OPERATIONS = process.env.ENABLE_WRITE_OPERATIONS === 'true';
+const ENABLE_TIMESCALE = process.env.ENABLE_TIMESCALE === 'true';
 const ALLOWED_USERS = process.env.ALLOWED_USERS ? process.env.ALLOWED_USERS.split(',') : [];
 const HA_BASE_URL = process.env.HA_BASE_URL || 'http://supervisor/core';
 
@@ -31,6 +32,7 @@ console.log('=== PostgreSQL MCP Server (SDK Compliant) ===');
 console.log(`Server Port: ${PORT}`);
 console.log(`Database URL: ${DATABASE_URL ? '[CONFIGURED]' : '[NOT SET]'}`);
 console.log(`Write Operations: ${ENABLE_WRITE_OPERATIONS ? 'ENABLED' : 'DISABLED'}`);
+console.log(`TimescaleDB Support: ${ENABLE_TIMESCALE ? 'ENABLED' : 'DISABLED'}`);
 console.log(`Home Assistant URL: ${HA_BASE_URL}`);
 console.log(`Log Level: ${LOG_LEVEL}`);
 console.log(`Max Connections: ${MAX_CONNECTIONS}`);
@@ -97,7 +99,7 @@ async function initializeApp(): Promise<void> {
 function createMCPServer(): McpServer {
   const server = new McpServer({
     name: 'PostgreSQL MCP Server for Home Assistant',
-    version: '1.4.17',
+    version: '1.4.18',
   });
 
   // Create configuration object for database tools
@@ -105,7 +107,8 @@ function createMCPServer(): McpServer {
     enableWriteOperations: ENABLE_WRITE_OPERATIONS,
     allowedUsers: ALLOWED_USERS,
     databaseUrl: DATABASE_URL,
-    maxConnections: MAX_CONNECTIONS
+    maxConnections: MAX_CONNECTIONS,
+    enable_timescale: ENABLE_TIMESCALE
   };
 
   // Register comprehensive database tools
@@ -191,7 +194,7 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     database: dbInitialized ? 'connected' : 'disconnected',
-    version: '1.4.17',
+    version: '1.4.18',
     sdk_compliant: true,
     auth_stats: {
       total_attempts: authAttempts,

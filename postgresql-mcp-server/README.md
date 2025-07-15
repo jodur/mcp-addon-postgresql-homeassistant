@@ -6,6 +6,7 @@ A Home Assistant addon that provides a Model Context Protocol (MCP) server for P
 
 - **🏠 Home Assistant Integration**: Uses Home Assistant's authentication system
 - **🗄️ PostgreSQL Database Access**: Direct database connection for MCP tools
+- **⏰ TimescaleDB Support**: Enhanced time-series database capabilities when enabled
 - **🔐 Secure Authentication**: Validates Home Assistant API tokens
 - **🛡️ SQL Injection Protection**: Built-in query validation and sanitization
 - **⚙️ Write Operation Control**: Enable/disable write operations via addon configuration
@@ -22,6 +23,37 @@ log_level: "info"
 max_connections: 10
 enable_write_operations: false
 ha_base_url: "http://homeassistant:8123"  # Home Assistant API URL (internal network)
+enable_timescale: false  # Enable TimescaleDB specific functions and descriptions
+```
+
+## TimescaleDB Support
+
+When `enable_timescale` is set to `true`, the MCP server provides enhanced tool descriptions with time-series specific functions:
+
+- **Time Bucketing**: `time_bucket('1 hour', time)` for time-based aggregations
+- **Gap Filling**: `time_bucket_gapfill()` for filling missing time intervals
+- **Interpolation**: `locf()` and `interpolate()` for data interpolation
+- **Time-series Aggregations**: `first()`, `last()`, `histogram()` functions
+- **Continuous Aggregates**: Support for materialized views optimized for time-series
+
+### Example TimescaleDB Queries
+
+```sql
+-- Average sensor readings per hour for the last day
+SELECT time_bucket('1 hour', time) as hour, 
+       avg(value) as avg_value 
+FROM sensor_data 
+WHERE time >= NOW() - INTERVAL '1 day' 
+GROUP BY hour 
+ORDER BY hour;
+
+-- Fill gaps in sensor data with linear interpolation
+SELECT time_bucket_gapfill('5 minutes', time) as time,
+       interpolate(avg(value)) as value
+FROM sensor_data
+WHERE time >= NOW() - INTERVAL '6 hours'
+GROUP BY time_bucket_gapfill('5 minutes', time)
+ORDER BY time;
 ```
 
 ## Usage

@@ -1,5 +1,23 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.18] - 2024-12-27
+
+### Added
+- **TimescaleDB Support Configuration**: Added `enable_timescale` configuration option
+- **Enhanced Tool Descriptions**: Dynamic tool descriptions with TimescaleDB-specific functions when enabled
+- **Time-Series Query Examples**: Comprehensive examples for TimescaleDB functions in tool descriptions
+- **Configuration Display**: TimescaleDB status now shown in startup logs
+
+### Enhanced
+- **queryDatabase Tool**: Now includes TimescaleDB function descriptions when enabled
+- **executeDatabase Tool**: Enhanced with TimescaleDB-specific write operation examples
+- **Documentation**: Updated README with TimescaleDB configuration and usage examples
+
+### Technical
+- Updated configuration schema to include `enable_timescale: bool`
+- Modified `McpConfig` interface to support TimescaleDB configuration
+- Enhanced tool registration with dynamic descriptions based on configuration
+
 ## [1.4.17] - 2024-12-27
 
 ### Fixed

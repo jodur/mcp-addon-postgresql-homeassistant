@@ -20,6 +20,9 @@ import { getUserContext, hasWritePermission } from '../auth/home-assistant-auth'
  * Register database tools with the MCP server
  */
 export function registerDatabaseTools(server: McpServer, config: McpConfig): void {
+  // Get TimescaleDB status for dynamic descriptions
+  const enableTimescale = config.enable_timescale || false;
+  
   // List tables tool - available to all authenticated users
   server.tool(
     'listTables',
@@ -131,7 +134,13 @@ export function registerDatabaseTools(server: McpServer, config: McpConfig): voi
   // Query database tool - available to all authenticated users
   server.tool(
     'queryDatabase',
-    'Execute a read-only SQL query against the PostgreSQL database',
+    enableTimescale 
+      ? `Execute a read-only SQL query against the PostgreSQL database with TimescaleDB support. 
+         TimescaleDB functions available: time_bucket(), first(), last(), histogram(), 
+         time_bucket_gapfill(), locf(), interpolate(), and time-series specific aggregations.
+         Example: SELECT time_bucket('1 hour', time) as hour, avg(value) FROM sensor_data 
+         WHERE time >= NOW() - INTERVAL '1 day' GROUP BY hour ORDER BY hour;`
+      : 'Execute a read-only SQL query against the PostgreSQL database',
     QueryDatabaseSchema.shape,
     async ({ sql, schema = 'public' }) => {
       try {
@@ -183,7 +192,13 @@ export function registerDatabaseTools(server: McpServer, config: McpConfig): voi
   if (config.enableWriteOperations) {
     server.tool(
       'executeDatabase',
-      'Execute a write SQL statement (INSERT, UPDATE, DELETE, DDL) against the PostgreSQL database',
+      enableTimescale 
+        ? `Execute a write SQL statement (INSERT, UPDATE, DELETE, DDL) against the PostgreSQL database with TimescaleDB support.
+           TimescaleDB functions available for write operations: CREATE TABLE with hypertable conversion,
+           time-series specific partitioning, and continuous aggregates.
+           Example: SELECT create_hypertable('sensor_data', 'time'); or 
+           INSERT INTO sensor_data (time, sensor_id, value) VALUES (NOW(), 'temp01', 23.5);`
+        : 'Execute a write SQL statement (INSERT, UPDATE, DELETE, DDL) against the PostgreSQL database',
       ExecuteDatabaseSchema.shape,
       async ({ sql, schema = 'public' }) => {
         try {

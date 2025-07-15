@@ -6,6 +6,7 @@ export interface McpConfig {
   enableWriteOperations: boolean;
   allowedUsers: string[];
   maxConnections: number;
+  enable_timescale?: boolean;
 }
 
 // Service context from Home Assistant authentication
