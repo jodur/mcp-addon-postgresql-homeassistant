@@ -1,5 +1,26 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.15] - 2024-12-27
+
+### Fixed
+- **CRITICAL**: Fixed AppArmor segmentation fault issue
+- Added proper Node.js system file access to prevent startup crashes
+- Enhanced AppArmor profile with complete Node.js runtime requirements
+- Fixed AppArmor profile name conflict (node -> nodeapp)
+
+### AppArmor Improvements
+- Added complete system file access for Node.js execution
+- Added proc and sys filesystem access for Node.js
+- Added Node.js module access paths
+- Added proper device file access (/dev/null, /dev/random, etc.)
+- Added variable run and tmp directory access
+
+### Technical Details
+- Previous profile was too restrictive causing segmentation faults
+- Node.js requires extensive system file access for proper execution
+- S6-Overlay integration requires proper signal handling and file access
+- Profile now follows Home Assistant addon standards more closely
+
 ## [1.4.14] - 2024-12-27
 
 ### Fixed

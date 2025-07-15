@@ -4,7 +4,15 @@ profile postgresql-mcp-server flags=(attach_disconnected,mediate_deleted) {
   #include <abstractions/base>
 
   # Capabilities
-  capability,
+  capability net_bind_service,
+  capability setgid,
+  capability setuid,
+  capability dac_override,
+  capability fowner,
+  capability fsetid,
+  capability kill,
+
+  # File access
   file,
   signal (send) set=(kill,term,int,hup,cont),
 
@@ -28,10 +36,46 @@ profile postgresql-mcp-server flags=(attach_disconnected,mediate_deleted) {
   # Access to options.json and other files within your addon
   /data/** rw,
 
-  # Start new profile for service
-  /usr/bin/node cx -> node,
+  # Application files
+  /app/** rw,
 
-  profile node flags=(attach_disconnected,mediate_deleted) {
+  # System files needed for Node.js
+  /etc/passwd r,
+  /etc/group r,
+  /etc/hosts r,
+  /etc/resolv.conf r,
+  /etc/nsswitch.conf r,
+  /etc/localtime r,
+  /etc/ssl/** r,
+  /etc/ca-certificates/** r,
+  /usr/share/ca-certificates/** r,
+  /proc/version r,
+  /proc/meminfo r,
+  /proc/cpuinfo r,
+  /proc/loadavg r,
+  /proc/uptime r,
+  /proc/stat r,
+  /proc/mounts r,
+  /proc/self/** r,
+  /sys/kernel/mm/transparent_hugepage/** r,
+  /dev/null rw,
+  /dev/zero r,
+  /dev/random r,
+  /dev/urandom r,
+  /dev/stdout w,
+  /dev/stderr w,
+  /dev/stdin r,
+  /var/run/** rwk,
+  /var/tmp/** rwk,
+
+  # Node.js modules
+  /usr/lib/node_modules/** r,
+  /usr/local/lib/node_modules/** r,
+
+  # Start new profile for service
+  /usr/bin/node cx -> nodeapp,
+
+  profile nodeapp flags=(attach_disconnected,mediate_deleted) {
     #include <abstractions/base>
 
     # Receive signals from S6-Overlay
@@ -43,11 +87,47 @@ profile postgresql-mcp-server flags=(attach_disconnected,mediate_deleted) {
     # Access to mapped volumes specified in config.json
     /share/** rw,
 
+    # Application files
+    /app/** r,
+
+    # System files needed for Node.js
+    /etc/passwd r,
+    /etc/group r,
+    /etc/hosts r,
+    /etc/resolv.conf r,
+    /etc/nsswitch.conf r,
+    /etc/localtime r,
+    /etc/ssl/** r,
+    /etc/ca-certificates/** r,
+    /usr/share/ca-certificates/** r,
+    /proc/version r,
+    /proc/meminfo r,
+    /proc/cpuinfo r,
+    /proc/loadavg r,
+    /proc/uptime r,
+    /proc/stat r,
+    /proc/mounts r,
+    /proc/self/** r,
+    /sys/kernel/mm/transparent_hugepage/** r,
+    /dev/null rw,
+    /dev/zero r,
+    /dev/random r,
+    /dev/urandom r,
+    /dev/stdout w,
+    /dev/stderr w,
+    /dev/stdin r,
+    /var/run/** rwk,
+    /var/tmp/** rwk,
+    /tmp/** rwk,
+
+    # Node.js modules
+    /usr/lib/node_modules/** r,
+    /usr/local/lib/node_modules/** r,
+
     # Access required for service functionality
     /usr/bin/node r,
     /bin/bash rix,
     /bin/echo ix,
-    /etc/passwd r,
     /dev/tty rw,
   }
 }
