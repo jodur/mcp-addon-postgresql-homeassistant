@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.9] - 2025-07-15
+
+### Fixed
+- **CONFIGURATION**: Updated default `ha_base_url` in config.yaml to use `http://homeassistant:8123` instead of `http://supervisor/core`
+- Ensured consistency between code defaults and addon configuration defaults
+- Fixed configuration mismatch that could cause authentication issues
+
 ## [1.4.8] - 2025-07-15
 
 ### Fixed

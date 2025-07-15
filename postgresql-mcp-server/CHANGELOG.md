@@ -1,5 +1,12 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.9] - 2025-07-15
+
+### Fixed
+- **CONFIGURATION**: Updated default `ha_base_url` in config.yaml to use `http://homeassistant:8123` instead of `http://supervisor/core`
+- Ensured consistency between code defaults and addon configuration defaults
+- Fixed configuration mismatch that could cause authentication issues
+
 ## [1.4.8] - 2025-07-15
 
 ### Fixed
