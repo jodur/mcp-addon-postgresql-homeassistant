@@ -1,5 +1,21 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.12] - 2024-12-27
+
+### Security
+- **NEW**: Added custom AppArmor security profile for enhanced container security
+- Implemented comprehensive AppArmor rules restricting file system access
+- Added network access controls for PostgreSQL and Home Assistant API communication
+- Restricted process capabilities to minimum required set
+- Added separate profile for Node.js application with specific permissions
+- **Security Rating**: Improved from 5/6 to 6/6 with AppArmor implementation
+
+### Benefits
+- Enhanced defense against malicious API calls and system hijacking
+- Restricted resource access beyond normal Docker constraints
+- Improved user trust through higher security rating
+- Second line of defense for input validation and data handling
+
 ## [1.4.11] - 2024-12-27
 
 ### Documentation

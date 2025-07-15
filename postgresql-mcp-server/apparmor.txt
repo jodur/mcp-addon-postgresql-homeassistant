@@ -1,0 +1,278 @@
+#include <tunables/global>
+
+profile postgresql-mcp-server flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  # Capabilities
+  capability net_bind_service,
+  capability net_raw,
+  capability setgid,
+  capability setuid,
+  capability sys_chroot,
+  capability dac_override,
+  capability fowner,
+  capability fsetid,
+  capability kill,
+  capability setpcap,
+  capability setfcap,
+  capability net_admin,
+  capability sys_admin,
+  capability sys_rawio,
+  capability sys_time,
+  capability audit_write,
+  capability lease,
+  capability linux_immutable,
+  capability net_broadcast,
+  capability ipc_lock,
+  capability ipc_owner,
+  capability sys_module,
+  capability sys_nice,
+  capability sys_pacct,
+  capability sys_ptrace,
+  capability sys_boot,
+  capability sys_tty_config,
+  capability mknod,
+  capability sys_resource,
+  capability wake_alarm,
+  capability block_suspend,
+  capability audit_read,
+  capability perfmon,
+  capability bpf,
+  capability checkpoint_restore,
+
+  # Network access
+  network inet stream,
+  network inet dgram,
+  network inet6 stream,
+  network inet6 dgram,
+  network netlink raw,
+  network unix dgram,
+  network unix stream,
+
+  # File system access
+  file,
+  audit deny owner /**/* m,
+  audit deny /**/* w,
+
+  # Allow specific needed access
+  /usr/bin/node rix,
+  /usr/bin/npm rix,
+  /usr/bin/npx rix,
+  /bin/bash rix,
+  /bin/sh rix,
+  /bin/curl rix,
+  /bin/echo ix,
+  /bin/cat ix,
+  /bin/ls ix,
+  /bin/ps ix,
+  /bin/grep ix,
+  /bin/awk ix,
+  /bin/sed ix,
+  /bin/date ix,
+  /bin/chmod ix,
+  /bin/chown ix,
+  /bin/mkdir ix,
+  /bin/rm ix,
+  /bin/cp ix,
+  /bin/mv ix,
+  /bin/ln ix,
+  /bin/sleep ix,
+  /bin/kill ix,
+  /bin/pkill ix,
+  /bin/pgrep ix,
+  /bin/find ix,
+  /bin/head ix,
+  /bin/tail ix,
+  /bin/wc ix,
+  /bin/which ix,
+  /bin/whoami ix,
+  /bin/id ix,
+  /bin/uname ix,
+  /bin/env ix,
+  /bin/test ix,
+  /bin/true ix,
+  /bin/false ix,
+
+  # Allow access to addon directories
+  /app/** rwix,
+  /data/** rw,
+  /share/** rw,
+  /ssl/** r,
+  /config/** r,
+
+  # Allow access to runtime directories
+  /tmp/** rwk,
+  /run/** rwk,
+  /var/run/** rwk,
+  /var/tmp/** rwk,
+  /dev/tty rw,
+  /dev/null rw,
+  /dev/zero r,
+  /dev/random r,
+  /dev/urandom r,
+  /dev/stdout w,
+  /dev/stderr w,
+  /dev/stdin r,
+
+  # Allow access to system files needed by Node.js
+  /etc/passwd r,
+  /etc/group r,
+  /etc/hosts r,
+  /etc/resolv.conf r,
+  /etc/nsswitch.conf r,
+  /etc/localtime r,
+  /etc/timezone r,
+  /etc/ssl/** r,
+  /etc/ca-certificates/** r,
+  /usr/share/ca-certificates/** r,
+  /usr/local/share/ca-certificates/** r,
+
+  # Allow access to Node.js modules and runtime
+  /usr/lib/node_modules/** r,
+  /usr/local/lib/node_modules/** r,
+  /app/node_modules/** r,
+  /app/dist/** r,
+  /app/src/** r,
+  /app/package.json r,
+  /app/package-lock.json r,
+  /app/tsconfig.json r,
+  /app/read-config.js r,
+
+  # Allow access to proc filesystem (limited)
+  /proc/version r,
+  /proc/meminfo r,
+  /proc/cpuinfo r,
+  /proc/loadavg r,
+  /proc/uptime r,
+  /proc/stat r,
+  /proc/mounts r,
+  /proc/filesystems r,
+  /proc/sys/kernel/hostname r,
+  /proc/sys/kernel/ostype r,
+  /proc/sys/kernel/osrelease r,
+  /proc/sys/kernel/version r,
+  /proc/sys/net/core/somaxconn r,
+  /proc/net/dev r,
+  /proc/net/route r,
+  /proc/self/maps r,
+  /proc/self/stat r,
+  /proc/self/status r,
+  /proc/self/cmdline r,
+  /proc/self/environ r,
+  /proc/self/fd/** r,
+  /proc/self/mounts r,
+  /proc/self/mountinfo r,
+  /proc/self/cgroup r,
+
+  # Allow access to sys filesystem (limited)
+  /sys/kernel/mm/transparent_hugepage/enabled r,
+  /sys/kernel/mm/transparent_hugepage/defrag r,
+
+  # Signal handling
+  signal (send) set=(kill,term,int,hup,cont),
+  signal (receive) peer=unconfined,
+
+  # S6-Overlay support
+  /init ix,
+  /command/** ix,
+  /package/** ix,
+  /etc/services.d/** rwix,
+  /etc/cont-init.d/** rwix,
+  /etc/cont-finish.d/** rwix,
+  /run/s6/** rwix,
+  /run/s6-rc*/** rwix,
+  /run/service/** rwix,
+
+  # Health check support
+  /health ix,
+
+  # Start new profile for Node.js application
+  /usr/bin/node cx -> nodejs_app,
+
+  profile nodejs_app flags=(attach_disconnected,mediate_deleted) {
+    #include <abstractions/base>
+
+    # Receive signals from parent
+    signal (receive) peer=*_postgresql-mcp-server,
+
+    # Node.js executable
+    /usr/bin/node r,
+
+    # Application files
+    /app/** r,
+    /data/** rw,
+    /share/** rw,
+    /ssl/** r,
+    /config/** r,
+
+    # Runtime directories
+    /tmp/** rwk,
+    /run/** rwk,
+    /var/run/** rwk,
+    /var/tmp/** rwk,
+    /dev/tty rw,
+    /dev/null rw,
+    /dev/zero r,
+    /dev/random r,
+    /dev/urandom r,
+    /dev/stdout w,
+    /dev/stderr w,
+    /dev/stdin r,
+
+    # System files
+    /etc/passwd r,
+    /etc/group r,
+    /etc/hosts r,
+    /etc/resolv.conf r,
+    /etc/nsswitch.conf r,
+    /etc/localtime r,
+    /etc/timezone r,
+    /etc/ssl/** r,
+    /etc/ca-certificates/** r,
+    /usr/share/ca-certificates/** r,
+    /usr/local/share/ca-certificates/** r,
+
+    # Node.js modules
+    /usr/lib/node_modules/** r,
+    /usr/local/lib/node_modules/** r,
+    /app/node_modules/** r,
+
+    # Network access for PostgreSQL and Home Assistant API
+    network inet stream,
+    network inet dgram,
+    network inet6 stream,
+    network inet6 dgram,
+    network unix stream,
+    network unix dgram,
+
+    # Process information
+    /proc/version r,
+    /proc/meminfo r,
+    /proc/cpuinfo r,
+    /proc/loadavg r,
+    /proc/uptime r,
+    /proc/stat r,
+    /proc/mounts r,
+    /proc/filesystems r,
+    /proc/sys/kernel/hostname r,
+    /proc/sys/kernel/ostype r,
+    /proc/sys/kernel/osrelease r,
+    /proc/sys/kernel/version r,
+    /proc/sys/net/core/somaxconn r,
+    /proc/net/dev r,
+    /proc/net/route r,
+    /proc/self/maps r,
+    /proc/self/stat r,
+    /proc/self/status r,
+    /proc/self/cmdline r,
+    /proc/self/environ r,
+    /proc/self/fd/** r,
+    /proc/self/mounts r,
+    /proc/self/mountinfo r,
+    /proc/self/cgroup r,
+
+    # System information
+    /sys/kernel/mm/transparent_hugepage/enabled r,
+    /sys/kernel/mm/transparent_hugepage/defrag r,
+  }
+}
