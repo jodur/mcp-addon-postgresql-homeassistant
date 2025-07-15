@@ -21,7 +21,7 @@ server_port: 3000
 log_level: "info"
 max_connections: 10
 enable_write_operations: false
-ha_base_url: "http://supervisor/core"  # Home Assistant API URL
+ha_base_url: "http://homeassistant:8123"  # Home Assistant API URL (internal network)
 ```
 
 ## Usage
@@ -45,7 +45,7 @@ Authorization: Bearer YOUR_HOME_ASSISTANT_TOKEN
 Use with Cloudflare tunnel for secure external access:
 
 ```bash
-curl -X POST https://your-tunnel-domain.cloudflareaccess.com/mcp \
+curl -X POST https://your-domain.your-tunnel.com/mcp \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_HA_TOKEN" \
   -d '{"method": "tools/list"}'
@@ -57,5 +57,32 @@ curl -X POST https://your-tunnel-domain.cloudflareaccess.com/mcp \
 - SQL query validation prevents dangerous operations
 - Write operations controlled by addon configuration
 - Database connection pooling with configurable limits
+
+## Configuration Notes
+
+- **ha_base_url**: Use `http://homeassistant:8123` for internal network communication (recommended)
+- **External access**: For external access via Cloudflare tunnel, use your tunnel domain
+- **Authentication**: Only Home Assistant long-lived access tokens are supported
+- **Database URL**: Must be a valid PostgreSQL connection string
+
+## Troubleshooting
+
+### Authentication Issues
+
+If authentication fails:
+1. Verify your Home Assistant token is valid
+2. Check that `ha_base_url` is set to `http://homeassistant:8123`
+3. Ensure the addon can reach Home Assistant's API
+
+### Database Connection Issues
+
+If database connection fails:
+1. Verify the database URL is correct
+2. Check that the database server is accessible
+3. Ensure the database user has proper permissions
+
+## Version
+
+Current version: 1.4.10
 
 For detailed documentation, see the [repository README](https://github.com/jodur/mcp-addon-postgresql-homeassistant).

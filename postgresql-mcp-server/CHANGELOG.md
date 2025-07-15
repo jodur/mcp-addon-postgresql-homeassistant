@@ -1,5 +1,13 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.11] - 2024-12-27
+
+### Documentation
+- Fixed incorrect configuration examples in README.md
+- Updated ha_base_url documentation to reflect current default (http://homeassistant:8123)
+- Added comprehensive troubleshooting section with common issues and solutions
+- Fixed external access configuration example
+
 ## [1.4.10] - 2025-07-15
 
 ### Removed
