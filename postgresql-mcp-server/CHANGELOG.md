@@ -1,5 +1,17 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.10] - 2025-07-15
+
+### Removed
+- **CLEANUP**: Removed unnecessary supervisor token handling from startup scripts
+- Removed SUPERVISOR_TOKEN and HASSIO_TOKEN exports and logging
+- Simplified startup configuration since we now use direct Home Assistant Core communication
+
+### Improved
+- Cleaner startup logs without unnecessary token information
+- Reduced security surface by not handling supervisor tokens
+- Streamlined configuration focused on direct Home Assistant Core API communication
+
 ## [1.4.9] - 2025-07-15
 
 ### Fixed
