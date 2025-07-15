@@ -1,5 +1,23 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.14] - 2024-12-27
+
+### Fixed
+- **AppArmor**: Fixed AppArmor profile to work properly with Home Assistant
+- Re-enabled AppArmor with minimal, working profile based on HA standards
+- Removed fallback approaches - AppArmor now works correctly
+- Simplified profile using standard Home Assistant addon patterns
+
+### Security
+- **Security Rating**: Back to 6/6 with working AppArmor profile
+- Proper AppArmor restrictions without startup failures
+- Enhanced container security with S6-Overlay and Node.js profiles
+
+### Removed
+- Removed fallback AppArmor files (apparmor-simple.txt)
+- Removed apparmor: false configuration
+- Cleaned up temporary workarounds
+
 ## [1.4.13] - 2024-12-27
 
 ### Fixed

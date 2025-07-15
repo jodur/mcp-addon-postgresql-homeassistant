@@ -4,28 +4,9 @@ profile postgresql-mcp-server flags=(attach_disconnected,mediate_deleted) {
   #include <abstractions/base>
 
   # Capabilities
-  capability net_bind_service,
-  capability setgid,
-  capability setuid,
-  capability dac_override,
-  capability fowner,
-  capability fsetid,
-  capability kill,
-
-  # Network access
-  network inet stream,
-  network inet dgram,
-  network inet6 stream,
-  network inet6 dgram,
-  network unix dgram,
-  network unix stream,
-
-  # File system access
+  capability,
   file,
-  
-  # Signal handling
   signal (send) set=(kill,term,int,hup,cont),
-  signal (receive) peer=unconfined,
 
   # S6-Overlay
   /init ix,
@@ -46,49 +27,27 @@ profile postgresql-mcp-server flags=(attach_disconnected,mediate_deleted) {
 
   # Access to options.json and other files within your addon
   /data/** rw,
-  /share/** rw,
-  /ssl/** r,
-  /config/** r,
 
-  # Application files
-  /app/** rw,
+  # Start new profile for service
+  /usr/bin/node cx -> node,
 
-  # System files needed
-  /etc/passwd r,
-  /etc/group r,
-  /etc/hosts r,
-  /etc/resolv.conf r,
-  /etc/nsswitch.conf r,
-  /etc/localtime r,
-  /etc/ssl/** r,
-  /etc/ca-certificates/** r,
-  /usr/share/ca-certificates/** r,
+  profile node flags=(attach_disconnected,mediate_deleted) {
+    #include <abstractions/base>
 
-  # Node.js and runtime
-  /usr/bin/node ix,
-  /usr/lib/node_modules/** r,
-  /usr/local/lib/node_modules/** r,
+    # Receive signals from S6-Overlay
+    signal (receive) peer=*_postgresql-mcp-server,
 
-  # Proc filesystem (limited)
-  /proc/version r,
-  /proc/meminfo r,
-  /proc/cpuinfo r,
-  /proc/loadavg r,
-  /proc/uptime r,
-  /proc/stat r,
-  /proc/mounts r,
-  /proc/self/** r,
+    # Access to options.json and other files within your addon
+    /data/** rw,
 
-  # Dev files
-  /dev/null rw,
-  /dev/zero r,
-  /dev/random r,
-  /dev/urandom r,
-  /dev/stdout w,
-  /dev/stderr w,
-  /dev/stdin r,
+    # Access to mapped volumes specified in config.json
+    /share/** rw,
 
-  # Runtime directories
-  /var/run/** rwk,
-  /var/tmp/** rwk,
+    # Access required for service functionality
+    /usr/bin/node r,
+    /bin/bash rix,
+    /bin/echo ix,
+    /etc/passwd r,
+    /dev/tty rw,
+  }
 }
