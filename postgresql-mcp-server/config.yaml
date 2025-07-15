@@ -1,10 +1,11 @@
 # Home Assistant Addon Configuration
 name: "PostgreSQL MCP Server"
 description: "Model Context Protocol server for PostgreSQL database access with authentication"
-version: "1.4.15"
+version: "1.4.16"
 slug: "postgresql-mcp-server"
 url: "https://github.com/jodur/mcp-addon-postgresql-homeassistant"
 codenotary: "notary@home-assistant.io"
+apparmor: false
 arch:
   - armhf
   - armv7

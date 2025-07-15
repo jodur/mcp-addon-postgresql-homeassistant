@@ -1,5 +1,29 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.16] - 2024-12-27
+
+### Fixed
+- **TEMPORARY**: Disabled AppArmor to resolve persistent segmentation fault
+- AppArmor profile causing Node.js crashes despite multiple attempts to fix
+- Set `apparmor: false` in config.yaml to ensure addon functionality
+
+### Issue Analysis
+- AppArmor profile continues to cause segmentation faults
+- Multiple iterations with different permission sets have failed
+- Node.js appears to need system access not covered by current AppArmor abstractions
+- Temporary solution: disable AppArmor until root cause identified
+
+### Status
+- **Security Rating**: 4/6 (reduced due to disabled AppArmor)
+- **Functionality**: Full addon functionality restored
+- **Priority**: Investigating AppArmor compatibility with Node.js in container environment
+
+### Next Steps
+- Test addon functionality without AppArmor
+- Research Node.js-specific AppArmor requirements
+- Consider alternative security hardening approaches
+- Re-enable AppArmor once stable profile identified
+
 ## [1.4.15] - 2024-12-27
 
 ### Fixed
