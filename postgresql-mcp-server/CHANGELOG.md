@@ -1,5 +1,24 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.13] - 2024-12-27
+
+### Fixed
+- **CRITICAL**: Fixed AppArmor startup issue causing container creation failures
+- Temporarily disabled AppArmor to resolve "unable to apply apparmor profile" error
+- Simplified AppArmor profile to reduce complexity and improve compatibility
+- Created fallback AppArmor profile (apparmor-simple.txt) for future use
+
+### Technical Details
+- AppArmor profile was too complex with excessive capabilities
+- System may not have AppArmor properly configured or enabled
+- Error: "write /proc/thread-self/attr/apparmor/exec: no such file or directory"
+- Solution: Set `apparmor: false` in config.yaml to disable AppArmor temporarily
+
+### Next Steps
+- Will investigate AppArmor system compatibility
+- May re-enable with simplified profile in future version
+- Security rating temporarily reduced but addon functionality restored
+
 ## [1.4.12] - 2024-12-27
 
 ### Security

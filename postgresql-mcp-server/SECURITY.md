@@ -7,14 +7,14 @@ This addon implements a custom AppArmor security profile to enhance container se
 ## Security Benefits
 
 ### 1. Enhanced Security Rating
-- **Before**: 5/6 (baseline)
-- **After**: 6/6 (maximum with AppArmor)
-- **Improvement**: +1 point for custom AppArmor profile
+- **Current**: 4/6 (AppArmor temporarily disabled due to compatibility issues)
+- **Target**: 6/6 (maximum with AppArmor - when re-enabled)
+- **Issue**: AppArmor startup failures on some Home Assistant installations
 
 ### 2. Defense in Depth
-- **Primary Defense**: Input validation and authentication in application code
-- **Secondary Defense**: AppArmor restrictions at kernel level
-- **Tertiary Defense**: Docker container isolation
+- **Primary Defense**: Input validation and authentication in application code ✅
+- **Secondary Defense**: AppArmor restrictions at kernel level ⚠️ (temporarily disabled)
+- **Tertiary Defense**: Docker container isolation ✅
 
 ### 3. Resource Access Control
 - **File System**: Restricted to only necessary directories and files
@@ -143,6 +143,32 @@ If the addon fails to start after AppArmor implementation:
 2. Verify all required paths are included
 3. Ensure proper signal handling permissions
 4. Test with complain mode temporarily
+
+## Troubleshooting AppArmor Issues
+
+### Common AppArmor Startup Errors
+
+If you encounter AppArmor-related startup failures:
+
+**Error**: `unable to apply apparmor profile: apparmor failed to apply profile: write /proc/thread-self/attr/apparmor/exec: no such file or directory`
+
+**Causes**:
+1. AppArmor is not enabled or properly configured on the Host OS
+2. Home Assistant OS version doesn't support AppArmor
+3. AppArmor profile is too complex or has syntax errors
+4. System permissions don't allow AppArmor profile application
+
+**Solutions**:
+1. **Temporary Fix**: AppArmor is currently disabled in config.yaml (`apparmor: false`)
+2. **Alternative Profile**: A simplified profile is available in `apparmor-simple.txt`
+3. **System Check**: Verify AppArmor is enabled on your Home Assistant installation
+4. **Future Updates**: We're working on a more compatible AppArmor implementation
+
+### Current Status
+- **AppArmor**: Disabled temporarily due to compatibility issues
+- **Security Rating**: 4/6 (reduced from target 6/6)
+- **Functionality**: Full addon functionality maintained
+- **Priority**: Investigating AppArmor system compatibility for future versions
 
 ## Security Rating Impact
 
