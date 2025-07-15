@@ -1,102 +1,30 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
-## [1.4.16] - 2024-12-27
+## [1.4.17] - 2024-12-27
 
 ### Fixed
-- **TEMPORARY**: Disabled AppArmor to resolve persistent segmentation fault
-- AppArmor profile causing Node.js crashes despite multiple attempts to fix
-- Set `apparmor: false` in config.yaml to ensure addon functionality
-
-### Issue Analysis
-- AppArmor profile continues to cause segmentation faults
-- Multiple iterations with different permission sets have failed
-- Node.js appears to need system access not covered by current AppArmor abstractions
-- Temporary solution: disable AppArmor until root cause identified
-
-### Status
-- **Security Rating**: 4/6 (reduced due to disabled AppArmor)
-- **Functionality**: Full addon functionality restored
-- **Priority**: Investigating AppArmor compatibility with Node.js in container environment
-
-### Next Steps
-- Test addon functionality without AppArmor
-- Research Node.js-specific AppArmor requirements
-- Consider alternative security hardening approaches
-- Re-enable AppArmor once stable profile identified
-
-## [1.4.15] - 2024-12-27
-
-### Fixed
-- **CRITICAL**: Fixed AppArmor segmentation fault issue
-- Added proper Node.js system file access to prevent startup crashes
-- Enhanced AppArmor profile with complete Node.js runtime requirements
-- Fixed AppArmor profile name conflict (node -> nodeapp)
-
-### AppArmor Improvements
-- Added complete system file access for Node.js execution
-- Added proc and sys filesystem access for Node.js
-- Added Node.js module access paths
-- Added proper device file access (/dev/null, /dev/random, etc.)
-- Added variable run and tmp directory access
-
-### Technical Details
-- Previous profile was too restrictive causing segmentation faults
-- Node.js requires extensive system file access for proper execution
-- S6-Overlay integration requires proper signal handling and file access
-- Profile now follows Home Assistant addon standards more closely
-
-## [1.4.14] - 2024-12-27
-
-### Fixed
-- **AppArmor**: Fixed AppArmor profile to work properly with Home Assistant
-- Re-enabled AppArmor with minimal, working profile based on HA standards
-- Removed fallback approaches - AppArmor now works correctly
-- Simplified profile using standard Home Assistant addon patterns
-
-### Security
-- **Security Rating**: Back to 6/6 with working AppArmor profile
-- Proper AppArmor restrictions without startup failures
-- Enhanced container security with S6-Overlay and Node.js profiles
+- **REVERT**: Restored to version 1.4.11 state (before AppArmor implementation)
+- Removed all AppArmor-related files and configurations
+- Reverted to working state that doesn't cause segmentation faults
+- Restored stable authentication and database functionality
 
 ### Removed
-- Removed fallback AppArmor files (apparmor-simple.txt)
-- Removed apparmor: false configuration
-- Cleaned up temporary workarounds
+- AppArmor profile (apparmor.txt)
+- AppArmor configuration settings
+- Security documentation (SECURITY.md)
+- All AppArmor-related debugging changes
 
-## [1.4.13] - 2024-12-27
-
-### Fixed
-- **CRITICAL**: Fixed AppArmor startup issue causing container creation failures
-- Temporarily disabled AppArmor to resolve "unable to apply apparmor profile" error
-- Simplified AppArmor profile to reduce complexity and improve compatibility
-- Created fallback AppArmor profile (apparmor-simple.txt) for future use
+### Status
+- **Security Rating**: 5/6 (baseline without AppArmor)
+- **Functionality**: Full working addon without segmentation faults
+- **Authentication**: Simplified token validation working correctly
+- **Database**: PostgreSQL connectivity and querying functional
 
 ### Technical Details
-- AppArmor profile was too complex with excessive capabilities
-- System may not have AppArmor properly configured or enabled
-- Error: "write /proc/thread-self/attr/apparmor/exec: no such file or directory"
-- Solution: Set `apparmor: false` in config.yaml to disable AppArmor temporarily
-
-### Next Steps
-- Will investigate AppArmor system compatibility
-- May re-enable with simplified profile in future version
-- Security rating temporarily reduced but addon functionality restored
-
-## [1.4.12] - 2024-12-27
-
-### Security
-- **NEW**: Added custom AppArmor security profile for enhanced container security
-- Implemented comprehensive AppArmor rules restricting file system access
-- Added network access controls for PostgreSQL and Home Assistant API communication
-- Restricted process capabilities to minimum required set
-- Added separate profile for Node.js application with specific permissions
-- **Security Rating**: Improved from 5/6 to 6/6 with AppArmor implementation
-
-### Benefits
-- Enhanced defense against malicious API calls and system hijacking
-- Restricted resource access beyond normal Docker constraints
-- Improved user trust through higher security rating
-- Second line of defense for input validation and data handling
+- AppArmor implementation caused persistent segmentation faults
+- Multiple attempts to fix AppArmor profile were unsuccessful
+- Restored to last known working version (1.4.11)
+- All core functionality maintained without AppArmor
 
 ## [1.4.11] - 2024-12-27
 
