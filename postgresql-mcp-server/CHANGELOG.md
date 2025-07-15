@@ -1,5 +1,19 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.4.7] - 2025-07-15
+
+### Fixed
+- **SIMPLIFIED**: Completely simplified authentication to use single Home Assistant API call
+- Removed overly complex authentication logic with multiple fallback endpoints
+- Authentication now makes single call to `/api/config` endpoint to validate tokens
+- Improved authentication performance and reliability
+- Cleaner error handling and debug logging
+
+### Code Quality
+- Reduced authentication code from 200+ lines to ~50 lines
+- Improved code maintainability and readability
+- Simplified token validation logic
+
 ## [1.4.6] - 2025-07-14
 
 ### Security
