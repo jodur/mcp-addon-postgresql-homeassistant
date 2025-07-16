@@ -10,6 +10,7 @@ LOG_LEVEL=$(bashio::config 'log_level')
 MAX_CONNECTIONS=$(bashio::config 'max_connections')
 ENABLE_WRITE_OPERATIONS=$(bashio::config 'enable_write_operations')
 HA_BASE_URL=$(bashio::config 'ha_base_url')
+ENABLE_TIMESCALE=$(bashio::config 'enable_timescale')
 
 # Export as environment variables for Node.js application
 export DATABASE_URL
@@ -18,6 +19,7 @@ export LOG_LEVEL
 export MAX_CONNECTIONS
 export ENABLE_WRITE_OPERATIONS
 export HA_BASE_URL
+export ENABLE_TIMESCALE
 
 # Debug logging
 bashio::log.info "Configuration loaded:"
@@ -27,6 +29,7 @@ bashio::log.info "  LOG_LEVEL: $LOG_LEVEL"
 bashio::log.info "  MAX_CONNECTIONS: $MAX_CONNECTIONS"
 bashio::log.info "  ENABLE_WRITE_OPERATIONS: $ENABLE_WRITE_OPERATIONS"
 bashio::log.info "  HA_BASE_URL: $HA_BASE_URL"
+bashio::log.info "  ENABLE_TIMESCALE: $ENABLE_TIMESCALE"
 
 # Validate required configuration
 if bashio::var.is_empty "${DATABASE_URL}"; then
