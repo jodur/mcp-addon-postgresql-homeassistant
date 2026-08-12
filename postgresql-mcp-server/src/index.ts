@@ -6,7 +6,7 @@ import * as dotenv from 'dotenv';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
+import { z } from 'zod/v3';
 import { authenticateToken } from './auth/home-assistant-auth';
 import { createOAuthRouter } from './auth/oauth-provider';
 import { initializeDatabase } from './database/connection';
@@ -126,7 +126,7 @@ async function initializeApp(): Promise<void> {
 function createMCPServer(): McpServer {
   const server = new McpServer({
     name: 'PostgreSQL MCP Server for Home Assistant',
-    version: '1.5.5',
+    version: '1.5.6',
   });
 
   // Create configuration object for database tools
@@ -221,7 +221,7 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     database: dbInitialized ? 'connected' : 'disconnected',
-    version: '1.5.5',
+    version: '1.5.6',
     sdk_compliant: true,
     auth_stats: {
       total_attempts: authAttempts,

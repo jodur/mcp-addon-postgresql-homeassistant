@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.6] - 2026-08-12
+
+### Security
+- Resolved all 7 npm audit vulnerabilities (SDK bump, removed unused morgan, patched body-parser/qs/path-to-regexp). See `postgresql-mcp-server/CHANGELOG.md` for details.
+
 ## [1.5.5] - 2026-08-12
 
 ### Security
