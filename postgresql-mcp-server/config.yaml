@@ -1,7 +1,7 @@
 # Home Assistant Addon Configuration
 name: "PostgreSQL MCP Server (OAuth Test)"
 description: "Model Context Protocol server for PostgreSQL database access with authentication"
-version: "1.5.2"
+version: "1.5.3"
 slug: "postgresql-mcp-server"
 url: "https://github.com/jodur/mcp-addon-postgresql-homeassistant"
 codenotary: "notary@home-assistant.io"
@@ -21,7 +21,6 @@ map:
   - "config:rw"
 options:
   database_url: "postgresql://username:password@host:5432/database"
-  server_port: 3000
   log_level: "info"
   max_connections: 10
   enable_write_operations: false
@@ -32,7 +31,6 @@ options:
   allowed_redirect_uris: ""
 schema:
   database_url: "str"
-  server_port: "int(1000,65535)"
   log_level: "list(debug|info|warn|error)"
   max_connections: "int(1,100)"
   enable_write_operations: "bool"

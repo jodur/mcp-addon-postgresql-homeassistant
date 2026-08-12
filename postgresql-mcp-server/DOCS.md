@@ -17,7 +17,7 @@ The add-on requires PostgreSQL connection details:
   - Format: `postgresql://username:password@host:5432/database`
   - Example: `postgresql://postgres:mypassword@192.168.1.100:5432/mydb`
 
-- **server_port**: Port for the MCP server (default: 3000)
+The MCP server always listens on container port 3000 internally; use the addon's **Network** tab in Home Assistant to change the externally reachable host port.
 
 ### Optional Options
 

@@ -1,5 +1,10 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.5.3] - 2026-08-12
+
+### Removed
+- **`server_port` option**: removed from `options`/`schema`. This option was redundant and dangerous — the addon's `ports:` mapping hardcodes the container-side port to `3000/tcp`, so changing `server_port` away from 3000 silently broke external connectivity (Docker would still only expose container port 3000, regardless of what the app listened on internally). The server now always listens on 3000 internally; use the addon's **Network** tab to change the externally reachable host port.
+
 ## [1.5.2] - 2026-08-12
 
 ### Fixed
