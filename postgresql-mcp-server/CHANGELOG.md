@@ -1,5 +1,10 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.5.1] - 2026-08-12
+
+### Fixed
+- **Dynamic Client Registration (RFC 7591)**: Added `POST /register` and advertised `registration_endpoint` in `.well-known/oauth-authorization-server`. Without this, claude.ai's connector failed at its "sign-in service" registration step before ever reaching `/authorize` (error: "Couldn't register with ... sign-in service").
+
 ## [1.5.0] - 2026-08-12
 
 ### Added

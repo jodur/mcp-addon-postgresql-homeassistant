@@ -49,6 +49,12 @@ interface IssuedCode {
   createdAt: number;
 }
 
+interface RegisteredClient {
+  clientName?: string;
+  redirectUris: string[];
+  createdAt: number;
+}
+
 const PENDING_TTL_MS = 5 * 60 * 1000; // 5 minutes to complete login
 const CODE_TTL_MS = 60 * 1000; // 60 seconds to redeem our own code
 const HA_PUBLIC_URL_CACHE_MS = 5 * 60 * 1000; // re-check HA's external_url occasionally, in case it changes
@@ -145,6 +151,10 @@ export async function resolveHaPublicUrl(override: string, haBaseUrl: string): P
 
 const pendingAuthorizations = new Map<string, PendingAuthorization>();
 const issuedCodes = new Map<string, IssuedCode>();
+// No TTL/pruning: registrations are rare (once per connector setup) and must
+// survive as long as the process runs, or claude.ai's stored client_id would
+// stop working until it re-registers.
+const registeredClients = new Map<string, RegisteredClient>();
 
 function pruneExpired<T extends { createdAt: number }>(map: Map<string, T>, ttlMs: number) {
   const now = Date.now();
@@ -224,6 +234,7 @@ export function createOAuthRouter(options: {
       issuer: publicUrl,
       authorization_endpoint: `${publicUrl}/authorize`,
       token_endpoint: `${publicUrl}/token`,
+      registration_endpoint: `${publicUrl}/register`,
       response_types_supported: ['code'],
       grant_types_supported: ['authorization_code', 'refresh_token'],
       code_challenge_methods_supported: ['S256', 'plain'],
@@ -242,6 +253,51 @@ export function createOAuthRouter(options: {
     res.json({
       resource: publicUrl,
       authorization_servers: [publicUrl],
+    });
+  });
+
+  // --- Dynamic Client Registration (RFC 7591) ---
+  // The MCP Authorization Spec expects servers to support this so clients
+  // like claude.ai can obtain a client_id without any manual setup. Without
+  // it, claude.ai's connector fails at the "sign-in service" step before
+  // ever reaching /authorize.
+  router.post('/register', (req: Request, res: Response) => {
+    const body = req.body as {
+      redirect_uris?: string[];
+      client_name?: string;
+      grant_types?: string[];
+      response_types?: string[];
+    };
+
+    const redirectUris = Array.isArray(body.redirect_uris) ? body.redirect_uris : [];
+    if (redirectUris.length === 0) {
+      res.status(400).json({ error: 'invalid_client_metadata', error_description: 'redirect_uris is required' });
+      return;
+    }
+
+    const disallowed = redirectUris.filter((uri) => !isAllowedRedirectUri(uri, allowedRedirectUris));
+    if (disallowed.length > 0) {
+      res.status(400).json({
+        error: 'invalid_redirect_uri',
+        error_description: `redirect_uri not on this server's allowlist: ${disallowed.join(', ')}`,
+      });
+      return;
+    }
+
+    const clientId = `mcp-${base64url(randomBytes(16))}`;
+    registeredClients.set(clientId, {
+      clientName: body.client_name,
+      redirectUris,
+      createdAt: Date.now(),
+    });
+
+    res.status(201).json({
+      client_id: clientId,
+      client_id_issued_at: Math.floor(Date.now() / 1000),
+      redirect_uris: redirectUris,
+      grant_types: body.grant_types?.length ? body.grant_types : ['authorization_code', 'refresh_token'],
+      response_types: body.response_types?.length ? body.response_types : ['code'],
+      token_endpoint_auth_method: 'none',
     });
   });
 
