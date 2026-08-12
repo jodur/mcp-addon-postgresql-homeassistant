@@ -1,5 +1,10 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.5.5] - 2026-08-12
+
+### Security
+- **Rate limiting on unauthenticated OAuth endpoints**: added `express-rate-limit`, applied per-IP to `/register` (10/15min — no TTL on what it stores, so unbounded floods were a real memory-growth risk), `/authorize` (20/15min), and `/token` (30/15min). Now that the addon is reachable over the public internet (not just LAN), these endpoints needed a bound beyond the existing 5-minute TTL on pending authorizations.
+
 ## [1.5.4] - 2026-08-12
 
 ### Security

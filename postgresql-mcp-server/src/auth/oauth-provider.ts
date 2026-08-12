@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { randomBytes, createHash, randomUUID } from 'node:crypto';
 
 /**
@@ -244,6 +245,13 @@ export function createOAuthRouter(options: {
   } = options;
   const router = Router();
 
+  // Unauthenticated-by-design endpoints (that's inherent to OAuth) are
+  // otherwise unbounded per-IP; /register in particular has no TTL on what
+  // it stores, so a flood would grow memory indefinitely without this.
+  const registerLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false });
+  const authorizeLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: true, legacyHeaders: false });
+  const tokenLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false });
+
   // Periodic sweep independent of request traffic — without this, entries
   // from abandoned/incomplete flows only get pruned the next time someone
   // hits /authorize, so a quiet server could accumulate them indefinitely.
@@ -294,7 +302,7 @@ export function createOAuthRouter(options: {
   // like claude.ai can obtain a client_id without any manual setup. Without
   // it, claude.ai's connector fails at the "sign-in service" step before
   // ever reaching /authorize.
-  router.post('/register', (req: Request, res: Response) => {
+  router.post('/register', registerLimiter, (req: Request, res: Response) => {
     applyRestrictedCors(req, res, allowedRedirectUris);
 
     const body = req.body as {
@@ -338,7 +346,7 @@ export function createOAuthRouter(options: {
 
   // --- Step 1/2: claude.ai starts the flow, we hand off to HA's login ---
 
-  router.get('/authorize', async (req: Request, res: Response) => {
+  router.get('/authorize', authorizeLimiter, async (req: Request, res: Response) => {
     pruneExpired(pendingAuthorizations, PENDING_TTL_MS);
 
     const {
@@ -484,7 +492,7 @@ export function createOAuthRouter(options: {
 
   // --- Step 5/6: claude.ai redeems our code (or refreshes) for the real HA token ---
 
-  router.post('/token', async (req: Request, res: Response) => {
+  router.post('/token', tokenLimiter, async (req: Request, res: Response) => {
     applyRestrictedCors(req, res, allowedRedirectUris);
 
     const { grant_type: grantType } = req.body as Record<string, string | undefined>;
