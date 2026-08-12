@@ -83,6 +83,35 @@ export function isAllowedRedirectUri(uri: string, extraAllowed: string[]): boole
   return extraAllowed.includes(uri);
 }
 
+// Same trust boundary as isAllowedRedirectUri, but comparing browser Origin
+// headers (no path) instead of full redirect_uris — used to scope CORS on
+// /token and /register instead of inheriting the app-wide wildcard policy.
+export function isAllowedOrigin(origin: string | undefined, extraAllowed: string[]): boolean {
+  if (!origin) return false;
+  if (origin === new URL(CLAUDE_AI_REDIRECT_URI).origin) return true;
+  if (isLoopbackRedirect(`${origin}/`)) return true;
+  return extraAllowed.some((uri) => {
+    try {
+      return new URL(uri).origin === origin;
+    } catch {
+      return false;
+    }
+  });
+}
+
+// Overrides whatever the app-wide wildcard CORS middleware already set,
+// scoping /token and /register to the same trusted origins as redirect_uri
+// validation — defense-in-depth for endpoints that hand back credentials.
+function applyRestrictedCors(req: Request, res: Response, extraAllowed: string[]): void {
+  res.setHeader('Vary', 'Origin');
+  const origin = req.headers.origin;
+  if (origin && isAllowedOrigin(origin, extraAllowed)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.removeHeader('Access-Control-Allow-Origin');
+  }
+}
+
 /**
  * This addon's own public URL, derived from the incoming request rather than
  * a static setting. Requires `app.set('trust proxy', true)` upstream so
@@ -266,6 +295,8 @@ export function createOAuthRouter(options: {
   // it, claude.ai's connector fails at the "sign-in service" step before
   // ever reaching /authorize.
   router.post('/register', (req: Request, res: Response) => {
+    applyRestrictedCors(req, res, allowedRedirectUris);
+
     const body = req.body as {
       redirect_uris?: string[];
       client_name?: string;
@@ -454,6 +485,8 @@ export function createOAuthRouter(options: {
   // --- Step 5/6: claude.ai redeems our code (or refreshes) for the real HA token ---
 
   router.post('/token', async (req: Request, res: Response) => {
+    applyRestrictedCors(req, res, allowedRedirectUris);
+
     const { grant_type: grantType } = req.body as Record<string, string | undefined>;
 
     if (grantType === 'authorization_code') {

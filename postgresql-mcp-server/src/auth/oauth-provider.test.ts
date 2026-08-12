@@ -5,6 +5,7 @@ import {
   verifyPkce,
   base64url,
   isAllowedRedirectUri,
+  isAllowedOrigin,
   isLoopbackRedirect,
   CLAUDE_AI_REDIRECT_URI,
 } from './oauth-provider';
@@ -78,5 +79,28 @@ describe('isAllowedRedirectUri', () => {
 
   test('rejects an arbitrary https URL not on the allowlist', () => {
     assert.equal(isAllowedRedirectUri('https://attacker.example.com/callback', []), false);
+  });
+});
+
+describe('isAllowedOrigin', () => {
+  test('allows the claude.ai origin', () => {
+    assert.equal(isAllowedOrigin('https://claude.ai', []), true);
+  });
+
+  test('allows a loopback origin for Claude Code', () => {
+    assert.equal(isAllowedOrigin('http://127.0.0.1:54321', []), true);
+  });
+
+  test('allows an explicitly configured extra origin', () => {
+    const extraRedirectUri = 'https://my-other-client.example.com/callback';
+    assert.equal(isAllowedOrigin('https://my-other-client.example.com', [extraRedirectUri]), true);
+  });
+
+  test('rejects an arbitrary origin not on the allowlist', () => {
+    assert.equal(isAllowedOrigin('https://attacker.example.com', []), false);
+  });
+
+  test('rejects a missing origin (non-browser requests are not a CORS concern)', () => {
+    assert.equal(isAllowedOrigin(undefined, []), false);
   });
 });

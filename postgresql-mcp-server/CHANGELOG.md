@@ -1,5 +1,10 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.5.4] - 2026-08-12
+
+### Security
+- **Scoped CORS on `/token` and `/register`**: these previously inherited the app-wide `origin: '*'` policy (meant for `/mcp`). They now only reflect `Access-Control-Allow-Origin` for origins on the same trust boundary as `redirect_uri` validation (claude.ai, localhost/127.0.0.1 loopback, configured `allowed_redirect_uris`), overriding the wildcard for these two endpoints specifically. `/mcp`, `/authorize`, `/callback`, and `.well-known/*` are unaffected — the former needs the open policy, the latter two are browser navigations (not subject to CORS) and public discovery metadata.
+
 ## [1.5.3] - 2026-08-12
 
 ### Removed
