@@ -111,7 +111,7 @@ let cachedHaPublicUrlAt = 0;
  * explicit override (ha_public_url addon option) always wins and skips
  * this entirely.
  */
-export async function resolveHaPublicUrl(override: string, haBaseUrl: string): Promise<string> {
+export async function resolveHaPublicUrl(override: string): Promise<string> {
   if (override) return override.replace(/\/$/, '');
 
   const now = Date.now();
@@ -127,13 +127,17 @@ export async function resolveHaPublicUrl(override: string, haBaseUrl: string): P
     );
   }
 
-  const response = await fetch(`${haBaseUrl}/api/config`, {
+  // Must go through the Supervisor's own proxy, not the user-configurable
+  // ha_base_url — SUPERVISOR_TOKEN is only valid there, not against Home
+  // Assistant Core directly (e.g. http://homeassistant:8123).
+  const SUPERVISOR_CORE_URL = 'http://supervisor/core';
+  const response = await fetch(`${SUPERVISOR_CORE_URL}/api/config`, {
     headers: { Authorization: `Bearer ${supervisorToken}` },
     signal: AbortSignal.timeout(10000),
   });
 
   if (!response.ok) {
-    throw new Error(`Auto-detecting Home Assistant's public URL failed (HTTP ${response.status} from ${haBaseUrl}/api/config).`);
+    throw new Error(`Auto-detecting Home Assistant's public URL failed (HTTP ${response.status} from ${SUPERVISOR_CORE_URL}/api/config).`);
   }
 
   const config = await response.json() as { external_url?: string | null };
@@ -344,7 +348,7 @@ export function createOAuthRouter(options: {
     let haPublicUrl: string;
     try {
       publicUrl = derivePublicUrl(req, publicUrlOverride);
-      haPublicUrl = await resolveHaPublicUrl(haPublicUrlOverride, haBaseUrl);
+      haPublicUrl = await resolveHaPublicUrl(haPublicUrlOverride);
     } catch (error) {
       console.error('OAuth /authorize setup error:', error);
       res.status(500).json({

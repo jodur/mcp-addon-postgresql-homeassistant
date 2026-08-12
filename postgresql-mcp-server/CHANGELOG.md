@@ -1,5 +1,10 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.5.2] - 2026-08-12
+
+### Fixed
+- **`resolveHaPublicUrl` used the wrong host for the Supervisor-token-authenticated call**: it called `${HA_BASE_URL}/api/config` (e.g. `http://homeassistant:8123`), but `SUPERVISOR_TOKEN` is only valid against the Supervisor's own proxy (`http://supervisor/core`), not Home Assistant Core directly. Caused `/authorize` to fail with `HTTP 401 from http://homeassistant:8123/api/config`. Now hardcoded to `http://supervisor/core/api/config` for this specific call, independent of the user-configurable `ha_base_url` option (which is unrelated — that one is for bearer-token validation via a different code path).
+
 ## [1.5.1] - 2026-08-12
 
 ### Fixed
