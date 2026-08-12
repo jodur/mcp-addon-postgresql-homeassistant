@@ -1,5 +1,18 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.5.0] - 2026-08-12
+
+### Added
+- **OAuth 2.1 support for claude.ai custom connectors**: New `/authorize`, `/callback`, `/token`, and `.well-known` discovery endpoints proxy Home Assistant's own OAuth2 authorization-code flow (`/auth/authorize`, `/auth/token`), so browser/mobile clients that only support OAuth (no static bearer headers) can log in and receive a genuine Home Assistant access token.
+- New addon options: `public_url`, `ha_public_url`, `allowed_redirect_uris` (all optional; auto-detected/derived if left blank).
+- `homeassistant_api: true` added to expose `SUPERVISOR_TOKEN`, used to auto-detect Home Assistant's `external_url`.
+
+### Unchanged
+- Existing bearer-token clients (Claude Desktop/Code, curl, SuperGateway, etc.) continue to work exactly as before — `authenticateToken`/`validateHomeAssistantToken` were not modified.
+
+### Removed
+- Deleted unused legacy files: `src/auth/home-assistant-auth-simple.ts` (dead code, never imported), `src/index-old-backup.ts`, `src/index-sdk-compliant.ts` (stale reference copies).
+
 ## [1.4.18] - 2024-12-27
 
 ### Added

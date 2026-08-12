@@ -11,6 +11,9 @@ MAX_CONNECTIONS=$(bashio::config 'max_connections')
 ENABLE_WRITE_OPERATIONS=$(bashio::config 'enable_write_operations')
 HA_BASE_URL=$(bashio::config 'ha_base_url')
 ENABLE_TIMESCALE=$(bashio::config 'enable_timescale')
+PUBLIC_URL=$(bashio::config 'public_url')
+HA_PUBLIC_URL=$(bashio::config 'ha_public_url')
+OAUTH_ALLOWED_REDIRECT_URIS=$(bashio::config 'allowed_redirect_uris')
 
 # Export as environment variables for Node.js application
 export DATABASE_URL
@@ -20,6 +23,9 @@ export MAX_CONNECTIONS
 export ENABLE_WRITE_OPERATIONS
 export HA_BASE_URL
 export ENABLE_TIMESCALE
+export PUBLIC_URL
+export HA_PUBLIC_URL
+export OAUTH_ALLOWED_REDIRECT_URIS
 
 # Debug logging
 bashio::log.info "Configuration loaded:"
@@ -30,6 +36,8 @@ bashio::log.info "  MAX_CONNECTIONS: $MAX_CONNECTIONS"
 bashio::log.info "  ENABLE_WRITE_OPERATIONS: $ENABLE_WRITE_OPERATIONS"
 bashio::log.info "  HA_BASE_URL: $HA_BASE_URL"
 bashio::log.info "  ENABLE_TIMESCALE: $ENABLE_TIMESCALE"
+bashio::log.info "  PUBLIC_URL override: ${PUBLIC_URL:-[not set - will auto-detect per request]}"
+bashio::log.info "  HA_PUBLIC_URL override: ${HA_PUBLIC_URL:-[not set - will auto-detect via Supervisor API]}"
 
 # Validate required configuration
 if bashio::var.is_empty "${DATABASE_URL}"; then
