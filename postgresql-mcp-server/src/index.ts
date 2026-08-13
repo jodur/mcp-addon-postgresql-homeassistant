@@ -6,8 +6,9 @@ import * as dotenv from 'dotenv';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
+import { z } from 'zod/v3';
 import { authenticateToken } from './auth/home-assistant-auth';
+import { createOAuthRouter } from './auth/oauth-provider';
 import { initializeDatabase } from './database/connection';
 import { registerDatabaseTools } from './tools/database-tools';
 
@@ -23,6 +24,14 @@ const ENABLE_WRITE_OPERATIONS = process.env.ENABLE_WRITE_OPERATIONS === 'true';
 const ENABLE_TIMESCALE = process.env.ENABLE_TIMESCALE === 'true';
 const ALLOWED_USERS = process.env.ALLOWED_USERS ? process.env.ALLOWED_USERS.split(',') : [];
 const HA_BASE_URL = process.env.HA_BASE_URL || 'http://supervisor/core';
+// Browser-reachable URLs (via e.g. the Cloudflare tunnel), required only for
+// the OAuth flow. The existing bearer-token flow (HA_BASE_URL, above) keeps
+// working exactly as before and does not need these.
+const PUBLIC_URL = (process.env.PUBLIC_URL || '').replace(/\/$/, '');
+const HA_PUBLIC_URL = (process.env.HA_PUBLIC_URL || '').replace(/\/$/, '');
+const OAUTH_ALLOWED_REDIRECT_URIS = process.env.OAUTH_ALLOWED_REDIRECT_URIS
+  ? process.env.OAUTH_ALLOWED_REDIRECT_URIS.split(',').map((s) => s.trim()).filter(Boolean)
+  : [];
 
 // Debug mode helper
 const isDebugMode = LOG_LEVEL === 'debug';
@@ -34,6 +43,7 @@ console.log(`Database URL: ${DATABASE_URL ? '[CONFIGURED]' : '[NOT SET]'}`);
 console.log(`Write Operations: ${ENABLE_WRITE_OPERATIONS ? 'ENABLED' : 'DISABLED'}`);
 console.log(`TimescaleDB Support: ${ENABLE_TIMESCALE ? 'ENABLED' : 'DISABLED'}`);
 console.log(`Home Assistant URL: ${HA_BASE_URL}`);
+console.log(`OAuth (for claude.ai): always enabled — public_url ${PUBLIC_URL || '[auto-detect per request]'}, ha_public_url ${HA_PUBLIC_URL || '[auto-detect via Supervisor API]'}`);
 console.log(`Log Level: ${LOG_LEVEL}`);
 console.log(`Max Connections: ${MAX_CONNECTIONS}`);
 console.log(`Allowed Users: ${ALLOWED_USERS.length ? ALLOWED_USERS.join(', ') : '[ALL AUTHENTICATED]'}`);
@@ -51,6 +61,11 @@ console.log('============================================');
 
 // Create Express app
 const app = express();
+// Required so req.protocol/req.get('host') reflect X-Forwarded-Proto/Host from
+// the Cloudflare Tunnel (or any reverse proxy) in front of the addon, rather
+// than the internal http://<container>:3000 the addon itself sees. Used by
+// the OAuth router to auto-derive its own public URL per-request.
+app.set('trust proxy', true);
 
 // Security middleware
 app.use(helmet());
@@ -61,6 +76,18 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '10mb' }));
+// OAuth token requests are application/x-www-form-urlencoded per RFC 6749 4.1.3.
+app.use(express.urlencoded({ extended: false }));
+
+// OAuth 2.1 endpoints for clients that require it (e.g. claude.ai web/mobile).
+// Existing bearer-token clients (Claude Desktop/Code with --header, curl,
+// SuperGateway, etc.) are entirely unaffected and keep working as before.
+app.use(createOAuthRouter({
+  publicUrlOverride: PUBLIC_URL,
+  haPublicUrlOverride: HA_PUBLIC_URL,
+  haBaseUrl: HA_BASE_URL,
+  allowedRedirectUris: OAUTH_ALLOWED_REDIRECT_URIS,
+}));
 
 // Store transports by session ID
 const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
@@ -99,7 +126,7 @@ async function initializeApp(): Promise<void> {
 function createMCPServer(): McpServer {
   const server = new McpServer({
     name: 'PostgreSQL MCP Server for Home Assistant',
-    version: '1.4.27',
+    version: '1.5.6',
   });
 
   // Create configuration object for database tools
@@ -194,7 +221,7 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     database: dbInitialized ? 'connected' : 'disconnected',
-    version: '1.4.27',
+    version: '1.5.6',
     sdk_compliant: true,
     auth_stats: {
       total_attempts: authAttempts,

@@ -18,7 +18,6 @@ Configure the addon through the Home Assistant UI:
 
 ```yaml
 database_url: "postgresql://username:password@host:5432/database"
-server_port: 3000
 log_level: "info"
 max_connections: 10
 enable_write_operations: false

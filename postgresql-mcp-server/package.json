@@ -1,6 +1,6 @@
 {
   "name": "mcp-addon-postgress-homeassistant",
-  "version": "1.4.27",
+  "version": "1.5.6",
   "description": "Home Assistant addon for PostgreSQL MCP server with authentication",
   "main": "dist/index.js",
   "scripts": {
@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "clean": "rimraf dist",
     "lint": "tsc --noEmit",
+    "test": "tsc -p tsconfig.test.json && node --test dist-test/auth/oauth-provider.test.js",
     "docker:build": "docker build -t mcp-postgres-ha .",
     "docker:run": "docker run -p 3000:3000 mcp-postgres-ha"
   },
@@ -24,18 +25,17 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
-    "@types/morgan": "^1.9.10",
     "@types/node": "^24.0.13",
     "@types/pg": "^8.15.4",
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.15.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.6.2",
     "helmet": "^8.1.0",
-    "morgan": "^1.10.0",
     "pg": "^8.16.3",
     "zod": "^3.25.76"
   }

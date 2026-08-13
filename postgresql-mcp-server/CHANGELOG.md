@@ -1,5 +1,51 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.5.6] - 2026-08-12
+
+### Security
+- **Resolved all 7 npm audit vulnerabilities**: removed unused `morgan`/`@types/morgan` (no fixed version exists for its `on-headers` dependency, and morgan was never actually imported in source — dead weight); bumped `@modelcontextprotocol/sdk` 1.15.1 → 1.30.0 (fixes the SDK's own cross-client data leak, disabled-by-default DNS rebinding protection, and ReDoS advisories, plus pulls a patched `ajv`); ran `npm audit fix` for `body-parser`/`qs`/`path-to-regexp` (patched versions within Express's existing semver ranges, no Express upgrade needed). `npm audit` now reports 0 vulnerabilities.
+
+### Fixed
+- The SDK 1.30.0 bump introduced a new internal `zod-compat` layer (typed against the `zod/v3` subpath) that caused `TS2589: Type instantiation is excessively deep and possibly infinite` at every `server.tool()`/`server.registerPrompt()` call site, since our code imported the top-level `zod` export instead. Fixed by importing `z` from `zod/v3` (an explicit subpath our installed zod 3.25.76 already ships) in `index.ts` and `types.ts`, aligning type identity with the SDK's compat layer.
+
+## [1.5.5] - 2026-08-12
+
+### Security
+- **Rate limiting on unauthenticated OAuth endpoints**: added `express-rate-limit`, applied per-IP to `/register` (10/15min — no TTL on what it stores, so unbounded floods were a real memory-growth risk), `/authorize` (20/15min), and `/token` (30/15min). Now that the addon is reachable over the public internet (not just LAN), these endpoints needed a bound beyond the existing 5-minute TTL on pending authorizations.
+
+## [1.5.4] - 2026-08-12
+
+### Security
+- **Scoped CORS on `/token` and `/register`**: these previously inherited the app-wide `origin: '*'` policy (meant for `/mcp`). They now only reflect `Access-Control-Allow-Origin` for origins on the same trust boundary as `redirect_uri` validation (claude.ai, localhost/127.0.0.1 loopback, configured `allowed_redirect_uris`), overriding the wildcard for these two endpoints specifically. `/mcp`, `/authorize`, `/callback`, and `.well-known/*` are unaffected — the former needs the open policy, the latter two are browser navigations (not subject to CORS) and public discovery metadata.
+
+## [1.5.3] - 2026-08-12
+
+### Removed
+- **`server_port` option**: removed from `options`/`schema`. This option was redundant and dangerous — the addon's `ports:` mapping hardcodes the container-side port to `3000/tcp`, so changing `server_port` away from 3000 silently broke external connectivity (Docker would still only expose container port 3000, regardless of what the app listened on internally). The server now always listens on 3000 internally; use the addon's **Network** tab to change the externally reachable host port.
+
+## [1.5.2] - 2026-08-12
+
+### Fixed
+- **`resolveHaPublicUrl` used the wrong host for the Supervisor-token-authenticated call**: it called `${HA_BASE_URL}/api/config` (e.g. `http://homeassistant:8123`), but `SUPERVISOR_TOKEN` is only valid against the Supervisor's own proxy (`http://supervisor/core`), not Home Assistant Core directly. Caused `/authorize` to fail with `HTTP 401 from http://homeassistant:8123/api/config`. Now hardcoded to `http://supervisor/core/api/config` for this specific call, independent of the user-configurable `ha_base_url` option (which is unrelated — that one is for bearer-token validation via a different code path).
+
+## [1.5.1] - 2026-08-12
+
+### Fixed
+- **Dynamic Client Registration (RFC 7591)**: Added `POST /register` and advertised `registration_endpoint` in `.well-known/oauth-authorization-server`. Without this, claude.ai's connector failed at its "sign-in service" registration step before ever reaching `/authorize` (error: "Couldn't register with ... sign-in service").
+
+## [1.5.0] - 2026-08-12
+
+### Added
+- **OAuth 2.1 support for claude.ai custom connectors**: New `/authorize`, `/callback`, `/token`, and `.well-known` discovery endpoints proxy Home Assistant's own OAuth2 authorization-code flow (`/auth/authorize`, `/auth/token`), so browser/mobile clients that only support OAuth (no static bearer headers) can log in and receive a genuine Home Assistant access token.
+- New addon options: `public_url`, `ha_public_url`, `allowed_redirect_uris` (all optional; auto-detected/derived if left blank).
+- `homeassistant_api: true` added to expose `SUPERVISOR_TOKEN`, used to auto-detect Home Assistant's `external_url`.
+
+### Unchanged
+- Existing bearer-token clients (Claude Desktop/Code, curl, SuperGateway, etc.) continue to work exactly as before — `authenticateToken`/`validateHomeAssistantToken` were not modified.
+
+### Removed
+- Deleted unused legacy files: `src/auth/home-assistant-auth-simple.ts` (dead code, never imported), `src/index-old-backup.ts`, `src/index-sdk-compliant.ts` (stale reference copies).
+
 ## [1.4.18] - 2024-12-27
 
 ### Added

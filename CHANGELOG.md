@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.6] - 2026-08-12
+
+### Security
+- Resolved all 7 npm audit vulnerabilities (SDK bump, removed unused morgan, patched body-parser/qs/path-to-regexp). See `postgresql-mcp-server/CHANGELOG.md` for details.
+
+## [1.5.5] - 2026-08-12
+
+### Security
+- Added per-IP rate limiting on /register, /authorize, /token via express-rate-limit. See `postgresql-mcp-server/CHANGELOG.md` for details.
+
+## [1.5.4] - 2026-08-12
+
+### Security
+- Scoped CORS on the OAuth `/token` and `/register` endpoints instead of inheriting the app-wide wildcard. See `postgresql-mcp-server/CHANGELOG.md` for details.
+
+## [1.5.3] - 2026-08-12
+
+### Removed
+- Redundant/unsafe `server_port` addon option (use the Network tab instead). See `postgresql-mcp-server/CHANGELOG.md` for details.
+
+## [1.5.2] - 2026-08-12
+
+### Fixed
+- OAuth `/authorize`'s Home Assistant public URL auto-detection now uses the Supervisor proxy (`http://supervisor/core`) instead of the user-configurable `ha_base_url`, fixing a 401 error. See `postgresql-mcp-server/CHANGELOG.md` for details.
+
+## [1.5.1] - 2026-08-12
+
+### Fixed
+- Added Dynamic Client Registration (RFC 7591) support so claude.ai's connector can complete sign-in. See `postgresql-mcp-server/CHANGELOG.md` for details.
+
+## [1.5.0] - 2026-08-12
+
+### Added
+- OAuth 2.1 support for claude.ai custom connectors, proxying Home Assistant's own OAuth2 authorization-code flow. See `postgresql-mcp-server/CHANGELOG.md` for details.
+
 ## [1.4.10] - 2025-07-15
 
 ### Removed
