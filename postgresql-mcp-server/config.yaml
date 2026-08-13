@@ -1,5 +1,5 @@
 # Home Assistant Addon Configuration
-name: "PostgreSQL MCP Server (OAuth Test)"
+name: "PostgreSQL MCP Server"
 description: "Model Context Protocol server for PostgreSQL database access with authentication"
 version: "1.5.6"
 slug: "postgresql-mcp-server"
