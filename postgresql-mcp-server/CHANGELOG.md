@@ -1,5 +1,10 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.5.7] - 2026-08-14
+
+### Documentation
+- **DOCS.md brought up to date**: documented the OAuth 2.1 flow (discovery, dynamic client registration, authorize/callback/token endpoints) and the `enable_timescale`, `public_url`, `ha_public_url`, `allowed_redirect_uris` options that were missing since their v1.5.0 introduction. Also added the `health` and `serverInfo` tools to the tool list and corrected the documented `ha_base_url` default.
+
 ## [1.5.6] - 2026-08-12
 
 ### Security

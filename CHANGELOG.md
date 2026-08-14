@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.7] - 2026-08-14
+
+### Documentation
+- Brought `DOCS.md` up to date with OAuth 2.1 support and current config options/tools. See `postgresql-mcp-server/CHANGELOG.md` for details.
+
 ## [1.5.6] - 2026-08-12
 
 ### Security

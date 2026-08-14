@@ -24,7 +24,11 @@ The MCP server always listens on container port 3000 internally; use the addon's
 - **log_level**: Logging verbosity (debug, info, warn, error)
 - **max_connections**: Maximum database connections (1-100)
 - **enable_write_operations**: Allow INSERT/UPDATE/DELETE operations
-- **ha_base_url**: Home Assistant API URL (default: http://supervisor/core)
+- **enable_timescale**: Enable TimescaleDB-specific function descriptions and examples in the query tools
+- **ha_base_url**: Home Assistant API URL used to validate bearer tokens (default: `http://homeassistant:8123`)
+- **public_url**: The externally reachable base URL of this addon (e.g. your Cloudflare tunnel domain). Only needed for the OAuth login flow; leave blank to auto-detect from the incoming request
+- **ha_public_url**: Home Assistant's externally reachable URL. Only needed for the OAuth login flow; leave blank to auto-detect via the Supervisor API
+- **allowed_redirect_uris**: Comma-separated list of additional OAuth redirect URIs to trust, beyond claude.ai and localhost loopback (e.g. for other MCP clients you use)
 
 ## Usage
 
@@ -34,17 +38,35 @@ After starting the add-on, the MCP server will be available at:
 
 ### Authentication
 
-All requests require a Home Assistant long-lived access token:
+Two authentication methods are supported, and both issue/validate genuine Home Assistant access tokens:
+
+**1. Bearer token (Claude Desktop/Code, curl, SuperGateway, etc.)**
+
+Pass a Home Assistant long-lived access token directly:
 
 ```bash
 Authorization: Bearer your_home_assistant_token
 ```
 
+**2. OAuth 2.1 (claude.ai custom connectors)**
+
+For clients that only support OAuth login (no static bearer header), the addon exposes a discovery/authorization flow that proxies Home Assistant's own OAuth2 authorization-code flow:
+
+- `GET /.well-known/oauth-authorization-server` / `GET /.well-known/oauth-protected-resource` - discovery metadata
+- `POST /register` - dynamic client registration (RFC 7591)
+- `GET /authorize` - redirects to Home Assistant's login page
+- `GET /callback` - receives the Home Assistant login result
+- `POST /token` - exchanges the authorization code for a real Home Assistant access token
+
+The user logs into Home Assistant in the browser as normal; no separate credentials are created by this addon.
+
 ### Available Tools
 
-- `listTables` - List all database tables
-- `queryDatabase` - Execute read-only queries
-- `executeDatabase` - Execute write operations (when enabled)
+- `listTables` - List all tables in the database, including columns, primary keys, foreign keys, and indexes
+- `queryDatabase` - Execute read-only SQL queries
+- `executeDatabase` - Execute write SQL statements (INSERT/UPDATE/DELETE), only available when `enable_write_operations` is true
+- `health` - Check the health status of the MCP server
+- `serverInfo` - Get information about the current server configuration
 
 ## Troubleshooting
 
@@ -62,6 +84,7 @@ Authorization: Bearer your_home_assistant_token
 1. Verify Home Assistant token is valid
 2. Check token has necessary permissions
 3. Ensure Home Assistant API is accessible
+4. For OAuth login issues, check that `public_url`/`ha_public_url` are correct (or blank to auto-detect) and that your client's redirect URI is trusted via `allowed_redirect_uris`
 
 ## Support
 
