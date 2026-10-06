@@ -1,5 +1,10 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.6.1] - 2026-10-07
+
+### Fixed
+- Consent page Approve button did nothing (popup stuck): helmet's CSP `form-action 'self'` blocked the redirect to Home Assistant. The consent page now sets a CSP allowing it.
+
 ## [1.6.0] - 2026-10-06
 
 ### Changed

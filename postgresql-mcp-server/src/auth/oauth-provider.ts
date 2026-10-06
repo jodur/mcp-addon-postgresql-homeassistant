@@ -524,6 +524,12 @@ export function createOAuthRouter(options: {
       const parsed = new URL(clientRedirectUri);
       destination = parsed.origin !== 'null' ? parsed.origin : `${parsed.protocol}//`;
     } catch { /* validated above */ }
+    // helmet's default `form-action 'self'` also blocks the post-submit redirect
+    // to Home Assistant (a different origin), leaving the popup stuck.
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https: http:",
+    );
     res.status(200).type('html').send(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Authorize access</title></head>
 <body style="font-family:sans-serif;max-width:32em;margin:3em auto;padding:0 1em">
