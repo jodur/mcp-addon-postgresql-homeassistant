@@ -1,13 +1,18 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import http from 'node:http';
+import type { AddressInfo } from 'node:net';
+import express from 'express';
+import { authenticateToken } from './home-assistant-auth';
 import {
   verifyPkce,
   base64url,
   isAllowedRedirectUri,
   isAllowedOrigin,
   isLoopbackRedirect,
-  CLAUDE_AI_REDIRECT_URI,
+  isValidRedirectUri,
+  createOAuthRouter,
 } from './oauth-provider';
 
 describe('base64url', () => {
@@ -63,30 +68,34 @@ describe('isLoopbackRedirect', () => {
   });
 });
 
-describe('isAllowedRedirectUri', () => {
-  test('allows the documented claude.ai callback', () => {
-    assert.equal(isAllowedRedirectUri(CLAUDE_AI_REDIRECT_URI, []), true);
+describe('isValidRedirectUri / isAllowedRedirectUri', () => {
+  test('accepts any https URL (not Claude-specific)', () => {
+    assert.equal(isAllowedRedirectUri('https://grok.com/connectors/callback', []), true);
   });
 
-  test('allows loopback redirects for Claude Code', () => {
+  test('accepts loopback and native app schemes', () => {
     assert.equal(isAllowedRedirectUri('http://127.0.0.1:12345/callback', []), true);
+    assert.equal(isAllowedRedirectUri('http://[::1]:12345/callback', []), true);
+    assert.equal(isAllowedRedirectUri('com.example.app:/oauth2redirect', []), true);
   });
 
-  test('allows an explicitly configured extra redirect_uri', () => {
+  test('rejects plain http non-loopback, dangerous schemes, fragments, garbage', () => {
+    assert.equal(isValidRedirectUri('http://example.com/cb'), false);
+    assert.equal(isValidRedirectUri('javascript:alert(1)'), false);
+    assert.equal(isValidRedirectUri('https://example.com/cb#frag'), false);
+    assert.equal(isValidRedirectUri('not-a-url'), false);
+    assert.equal(isValidRedirectUri(42), false);
+  });
+
+  test('strict mode only allows loopback and allowlisted URIs', () => {
     const extra = 'https://my-other-client.example.com/callback';
-    assert.equal(isAllowedRedirectUri(extra, [extra]), true);
-  });
-
-  test('rejects an arbitrary https URL not on the allowlist', () => {
-    assert.equal(isAllowedRedirectUri('https://attacker.example.com/callback', []), false);
+    assert.equal(isAllowedRedirectUri(extra, [extra], true), true);
+    assert.equal(isAllowedRedirectUri('http://localhost:1/cb', [], true), true);
+    assert.equal(isAllowedRedirectUri('https://attacker.example.com/callback', [], true), false);
   });
 });
 
 describe('isAllowedOrigin', () => {
-  test('allows the claude.ai origin', () => {
-    assert.equal(isAllowedOrigin('https://claude.ai', []), true);
-  });
-
   test('allows a loopback origin for Claude Code', () => {
     assert.equal(isAllowedOrigin('http://127.0.0.1:54321', []), true);
   });
@@ -102,5 +111,62 @@ describe('isAllowedOrigin', () => {
 
   test('rejects a missing origin (non-browser requests are not a CORS concern)', () => {
     assert.equal(isAllowedOrigin(undefined, []), false);
+  });
+});
+
+async function withServer(fn: (base: string) => Promise<void>) {
+  const app = express();
+  app.set('trust proxy', 1);
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: false }));
+  app.use(createOAuthRouter({ haBaseUrl: 'http://ha.invalid', haPublicUrlOverride: 'https://ha.example.com' }));
+  app.post('/mcp', authenticateToken, (_req, res) => { res.json({ ok: true }); });
+  const server = http.createServer(app);
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try { await fn(base); } finally { server.close(); }
+}
+
+describe('HTTP behaviour', () => {
+  test('401 on /mcp carries a resource_metadata challenge', async () => {
+    await withServer(async (base) => {
+      const res = await fetch(`${base}/mcp`, { method: 'POST', headers: { 'x-forwarded-proto': 'https' } });
+      assert.equal(res.status, 401);
+      const header = res.headers.get('www-authenticate') || '';
+      assert.ok(header.startsWith('Bearer '));
+      assert.ok(header.includes(`resource_metadata="https://${new URL(base).host}/.well-known/oauth-protected-resource"`));
+      assert.ok(!header.includes('invalid_token'));
+    });
+  });
+
+  test('discovery documents are aligned with the /mcp endpoint', async () => {
+    await withServer(async (base) => {
+      const prm = await (await fetch(`${base}/.well-known/oauth-protected-resource`)).json() as any;
+      assert.equal(prm.resource, `${base}/mcp`);
+      assert.deepEqual(prm.authorization_servers, [base]);
+      const as = await (await fetch(`${base}/.well-known/oauth-authorization-server`)).json() as any;
+      assert.equal(as.issuer, base);
+      assert.ok(as.code_challenge_methods_supported.includes('S256'));
+      assert.equal(as.registration_endpoint, `${base}/register`);
+    });
+  });
+
+  test('registration + authorize enforce the registered redirect_uri and show consent', async () => {
+    await withServer(async (base) => {
+      const bad = await fetch(`${base}/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ redirect_uris: ['http://evil.example.com/cb'] }) });
+      assert.equal(bad.status, 400);
+
+      const reg = await fetch(`${base}/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ redirect_uris: ['https://grok.example/cb'], client_name: 'Grok' }) });
+      assert.equal(reg.status, 201);
+      const { client_id } = await reg.json() as any;
+
+      const q = (redirect: string) => `${base}/authorize?response_type=code&client_id=${client_id}&redirect_uri=${encodeURIComponent(redirect)}&code_challenge=abc&code_challenge_method=S256`;
+      const mismatch = await fetch(q('https://attacker.example/cb'), { redirect: 'manual' });
+      assert.equal(mismatch.status, 400);
+
+      const ok = await fetch(q('https://grok.example/cb'), { redirect: 'manual' });
+      assert.equal(ok.status, 200);
+      assert.ok((await ok.text()).includes('/authorize/consent'));
+    });
   });
 });

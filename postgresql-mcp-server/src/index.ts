@@ -43,7 +43,7 @@ console.log(`Database URL: ${DATABASE_URL ? '[CONFIGURED]' : '[NOT SET]'}`);
 console.log(`Write Operations: ${ENABLE_WRITE_OPERATIONS ? 'ENABLED' : 'DISABLED'}`);
 console.log(`TimescaleDB Support: ${ENABLE_TIMESCALE ? 'ENABLED' : 'DISABLED'}`);
 console.log(`Home Assistant URL: ${HA_BASE_URL}`);
-console.log(`OAuth (for claude.ai): always enabled — public_url ${PUBLIC_URL || '[auto-detect per request]'}, ha_public_url ${HA_PUBLIC_URL || '[auto-detect via Supervisor API]'}`);
+console.log(`OAuth (generic MCP clients): always enabled — public_url ${PUBLIC_URL || '[auto-detect per request]'}, ha_public_url ${HA_PUBLIC_URL || '[auto-detect via Supervisor API]'}`);
 console.log(`Log Level: ${LOG_LEVEL}`);
 console.log(`Max Connections: ${MAX_CONNECTIONS}`);
 console.log(`Allowed Users: ${ALLOWED_USERS.length ? ALLOWED_USERS.join(', ') : '[ALL AUTHENTICATED]'}`);
@@ -65,14 +65,18 @@ const app = express();
 // the Cloudflare Tunnel (or any reverse proxy) in front of the addon, rather
 // than the internal http://<container>:3000 the addon itself sees. Used by
 // the OAuth router to auto-derive its own public URL per-request.
-app.set('trust proxy', true);
+// A permissive `true` lets clients spoof X-Forwarded-For and defeats per-IP
+// rate limiting (express-rate-limit rejects it), so trust a bounded number of
+// hops (default 1: the tunnel/reverse proxy) or an Express trust-proxy value.
+const TRUST_PROXY_RAW = (process.env.TRUST_PROXY || '1').trim();
+app.set('trust proxy', /^\d+$/.test(TRUST_PROXY_RAW) ? parseInt(TRUST_PROXY_RAW, 10) : TRUST_PROXY_RAW);
 
 // Security middleware
 app.use(helmet());
 app.use(cors({
   origin: '*',
-  exposedHeaders: ['Mcp-Session-Id'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'mcp-session-id'],
+  exposedHeaders: ['Mcp-Session-Id', 'WWW-Authenticate'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'mcp-session-id', 'mcp-protocol-version', 'Accept', 'Last-Event-ID'],
 }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -87,6 +91,8 @@ app.use(createOAuthRouter({
   haPublicUrlOverride: HA_PUBLIC_URL,
   haBaseUrl: HA_BASE_URL,
   allowedRedirectUris: OAUTH_ALLOWED_REDIRECT_URIS,
+  strictRedirectUris: process.env.OAUTH_STRICT_REDIRECT_URIS === 'true',
+  clientsFile: process.env.OAUTH_CLIENTS_FILE || '/data/oauth-clients.json',
 }));
 
 // Store transports by session ID
@@ -126,7 +132,7 @@ async function initializeApp(): Promise<void> {
 function createMCPServer(): McpServer {
   const server = new McpServer({
     name: 'PostgreSQL MCP Server for Home Assistant',
-    version: '1.5.7',
+    version: '1.6.0',
   });
 
   // Create configuration object for database tools
@@ -221,7 +227,7 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     database: dbInitialized ? 'connected' : 'disconnected',
-    version: '1.5.7',
+    version: '1.6.0',
     sdk_compliant: true,
     auth_stats: {
       total_attempts: authAttempts,
