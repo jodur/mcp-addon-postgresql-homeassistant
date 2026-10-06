@@ -104,3 +104,5 @@ docker-compose.override.yml
 secrets.yaml
 *.db
 *.db-journal
+
+dist-test/
