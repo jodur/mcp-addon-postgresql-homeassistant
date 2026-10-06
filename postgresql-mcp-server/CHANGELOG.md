@@ -1,5 +1,15 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.6.0] - 2026-10-06
+
+### Changed
+- **OAuth works with generic MCP clients (e.g. Grok), not just Claude**: unauthenticated or invalid `/mcp` requests now return `WWW-Authenticate: ******".../.well-known/oauth-protected-resource"` (plus `error="invalid_token"` for bad tokens), exposed via CORS. Protected-resource metadata now advertises the `/mcp` resource (also served at `/.well-known/oauth-protected-resource/mcp`).
+- Redirect URIs are validated against the client's dynamic registration (https, loopback, or native custom schemes) instead of a Claude-only allowlist. `OAUTH_ALLOWED_REDIRECT_URIS` entries skip the new consent page; `OAUTH_STRICT_REDIRECT_URIS=true` restores allowlist-only behaviour. A consent page prevents open-redirect abuse. Registered clients are persisted to `/data/oauth-clients.json` (override with `OAUTH_CLIENTS_FILE`).
+- CORS allows `MCP-Protocol-Version`, `Accept`, `Last-Event-ID`.
+
+### Fixed
+- `trust proxy` is no longer `true` (rejected by `express-rate-limit`); defaults to 1 hop, configurable with `TRUST_PROXY`.
+
 ## [1.5.7] - 2026-08-14
 
 ### Documentation

@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { randomBytes, createHash, randomUUID } from 'node:crypto';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 /**
  * OAuth 2.1 wrapper around Home Assistant's own OAuth authorization server.
@@ -39,6 +41,12 @@ interface PendingAuthorization {
   // what HA was actually given, regardless of which host serves /callback.
   ourHaClientId: string;
   ourHaRedirectUri: string;
+  clientId: string;
+  // Where to send the user's browser to log into Home Assistant; only
+  // followed once the redirect_uri has been approved (consent step, or
+  // admin-allowlisted redirect_uri).
+  haAuthorizeUrl: string;
+  approved: boolean;
 }
 
 interface IssuedCode {
@@ -60,36 +68,58 @@ const PENDING_TTL_MS = 5 * 60 * 1000; // 5 minutes to complete login
 const CODE_TTL_MS = 60 * 1000; // 60 seconds to redeem our own code
 const HA_PUBLIC_URL_CACHE_MS = 5 * 60 * 1000; // re-check HA's external_url occasionally, in case it changes
 
-// Claude's documented OAuth callback (web/desktop/mobile/Cowork all share this
-// one). Claude Code uses ephemeral-port loopback redirects instead, checked
-// separately below. Additional trusted redirect URIs can be supplied via the
-// allowedRedirectUris option (e.g. for other MCP clients you use).
-export const CLAUDE_AI_REDIRECT_URI = 'https://claude.ai/api/mcp/auth_callback';
-
 export function isLoopbackRedirect(uri: string): boolean {
   try {
     const parsed = new URL(uri);
     return (
       parsed.protocol === 'http:' &&
-      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')
+      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]')
     );
   } catch {
     return false;
   }
 }
 
-export function isAllowedRedirectUri(uri: string, extraAllowed: string[]): boolean {
-  if (uri === CLAUDE_AI_REDIRECT_URI) return true;
-  if (isLoopbackRedirect(uri)) return true;
-  return extraAllowed.includes(uri);
+// Schemes that can execute code or never make sense as an OAuth callback.
+const FORBIDDEN_REDIRECT_SCHEMES = new Set([
+  'javascript:', 'data:', 'vbscript:', 'file:', 'about:', 'blob:', 'ftp:', 'ws:', 'wss:',
+]);
+
+/**
+ * Generic redirect_uri sanity check used at dynamic client registration:
+ * https URLs, http loopback (native apps, RFC 8252 7.3) and private-use
+ * custom schemes (RFC 8252 7.1) are accepted; fragments, credentials, and
+ * dangerous or plaintext non-loopback schemes are rejected.
+ */
+export function isValidRedirectUri(uri: unknown): uri is string {
+  if (typeof uri !== 'string' || uri.length === 0 || uri.length > 2048) return false;
+  let parsed: URL;
+  try {
+    parsed = new URL(uri);
+  } catch {
+    return false;
+  }
+  if (parsed.hash) return false;
+  if (parsed.protocol === 'https:') return !parsed.username && !parsed.password;
+  if (parsed.protocol === 'http:') return isLoopbackRedirect(uri);
+  return !FORBIDDEN_REDIRECT_SCHEMES.has(parsed.protocol);
 }
 
-// Same trust boundary as isAllowedRedirectUri, but comparing browser Origin
-// headers (no path) instead of full redirect_uris — used to scope CORS on
-// /token and /register instead of inheriting the app-wide wildcard policy.
+/**
+ * Strict mode (optional): only loopback redirects and explicitly allowlisted
+ * redirect_uris may be registered/used. Otherwise any valid redirect_uri that
+ * the client registered is accepted.
+ */
+export function isAllowedRedirectUri(uri: string, extraAllowed: string[], strict = false): boolean {
+  if (!isValidRedirectUri(uri)) return false;
+  if (!strict) return true;
+  return isLoopbackRedirect(uri) || extraAllowed.includes(uri);
+}
+
+// Compares browser Origin headers (no path) against loopback and the
+// allowlist — only used to scope CORS on /token and /register in strict mode.
 export function isAllowedOrigin(origin: string | undefined, extraAllowed: string[]): boolean {
   if (!origin) return false;
-  if (origin === new URL(CLAUDE_AI_REDIRECT_URI).origin) return true;
   if (isLoopbackRedirect(`${origin}/`)) return true;
   return extraAllowed.some((uri) => {
     try {
@@ -100,9 +130,8 @@ export function isAllowedOrigin(origin: string | undefined, extraAllowed: string
   });
 }
 
-// Overrides whatever the app-wide wildcard CORS middleware already set,
-// scoping /token and /register to the same trusted origins as redirect_uri
-// validation — defense-in-depth for endpoints that hand back credentials.
+// In strict mode, overrides the app-wide CORS policy so /token and /register
+// are only reachable from trusted browser origins.
 function applyRestrictedCors(req: Request, res: Response, extraAllowed: string[]): void {
   res.setHeader('Vary', 'Origin');
   const origin = req.headers.origin;
@@ -113,9 +142,13 @@ function applyRestrictedCors(req: Request, res: Response, extraAllowed: string[]
   }
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+}
+
 /**
  * This addon's own public URL, derived from the incoming request rather than
- * a static setting. Requires `app.set('trust proxy', true)` upstream so
+ * a static setting. Requires a `trust proxy` setting upstream so
  * req.protocol/req.get('host') reflect X-Forwarded-Proto/Host from the
  * Cloudflare Tunnel (or any reverse proxy) instead of the internal address.
  * An explicit override (public_url addon option) always wins, for setups
@@ -185,10 +218,30 @@ export async function resolveHaPublicUrl(override: string): Promise<string> {
 
 const pendingAuthorizations = new Map<string, PendingAuthorization>();
 const issuedCodes = new Map<string, IssuedCode>();
-// No TTL/pruning: registrations are rare (once per connector setup) and must
-// survive as long as the process runs, or claude.ai's stored client_id would
-// stop working until it re-registers.
+// No TTL: registrations are rare (once per connector setup) and must survive
+// as long as the process runs, or a client's stored client_id would stop
+// working until it re-registers. Capped (oldest evicted) and, when possible,
+// persisted to disk so they also survive addon restarts.
+const MAX_REGISTERED_CLIENTS = 500;
 const registeredClients = new Map<string, RegisteredClient>();
+
+function loadClients(file: string): void {
+  try {
+    const entries = JSON.parse(readFileSync(file, 'utf8')) as Array<[string, RegisteredClient]>;
+    for (const [id, client] of entries) registeredClients.set(id, client);
+  } catch {
+    // no/invalid file: start empty
+  }
+}
+
+function saveClients(file: string): void {
+  try {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify([...registeredClients]), { mode: 0o600 });
+  } catch {
+    // best effort: stay in-memory if the location is not writable
+  }
+}
 
 function pruneExpired<T extends { createdAt: number }>(map: Map<string, T>, ttlMs: number) {
   const now = Date.now();
@@ -216,7 +269,7 @@ export function createOAuthRouter(options: {
   /**
    * Override for this addon's own public URL. Leave empty to auto-derive it
    * per-request from the incoming Host header / X-Forwarded-Proto (requires
-   * `app.set('trust proxy', true)` on the Express app).
+   * a suitable `trust proxy` setting on the Express app).
    */
   publicUrlOverride?: string;
   /**
@@ -234,16 +287,29 @@ export function createOAuthRouter(options: {
    * browser, so it doesn't need to round-trip through the public tunnel.
    */
   haBaseUrl: string;
-  /** Extra trusted redirect_uris beyond claude.ai's own and localhost loopback (e.g. other MCP clients) */
+  /**
+   * Trusted redirect_uris. These skip the consent page and, in strict mode,
+   * are the only non-loopback redirect_uris that may be registered.
+   */
   allowedRedirectUris?: string[];
+  /** Only accept loopback and allowlisted redirect_uris (default false) */
+  strictRedirectUris?: boolean;
+  /** File used to persist registered clients across restarts (optional) */
+  clientsFile?: string;
 }): Router {
   const {
     publicUrlOverride = '',
     haPublicUrlOverride = '',
     haBaseUrl,
     allowedRedirectUris = [],
+    strictRedirectUris = false,
+    clientsFile,
   } = options;
   const router = Router();
+  if (clientsFile) loadClients(clientsFile);
+  const restrictCors = (req: Request, res: Response) => {
+    if (strictRedirectUris) applyRestrictedCors(req, res, allowedRedirectUris);
+  };
 
   // Unauthenticated-by-design endpoints (that's inherent to OAuth) are
   // otherwise unbounded per-IP; /register in particular has no TTL on what
@@ -277,13 +343,14 @@ export function createOAuthRouter(options: {
       token_endpoint: `${publicUrl}/token`,
       registration_endpoint: `${publicUrl}/register`,
       response_types_supported: ['code'],
+      response_modes_supported: ['query'],
       grant_types_supported: ['authorization_code', 'refresh_token'],
       code_challenge_methods_supported: ['S256', 'plain'],
       token_endpoint_auth_methods_supported: ['none'],
     });
   });
 
-  router.get('/.well-known/oauth-protected-resource', (req: Request, res: Response) => {
+  const protectedResourceHandler = (req: Request, res: Response) => {
     let publicUrl: string;
     try {
       publicUrl = derivePublicUrl(req, publicUrlOverride);
@@ -292,10 +359,15 @@ export function createOAuthRouter(options: {
       return;
     }
     res.json({
-      resource: publicUrl,
+      resource: `${publicUrl}/mcp`,
       authorization_servers: [publicUrl],
+      bearer_methods_supported: ['header'],
+      resource_name: 'PostgreSQL MCP Server',
     });
-  });
+  };
+  // RFC 9728: root form and the path-aware form for the /mcp resource.
+  router.get('/.well-known/oauth-protected-resource', protectedResourceHandler);
+  router.get('/.well-known/oauth-protected-resource/mcp', protectedResourceHandler);
 
   // --- Dynamic Client Registration (RFC 7591) ---
   // The MCP Authorization Spec expects servers to support this so clients
@@ -303,7 +375,7 @@ export function createOAuthRouter(options: {
   // it, claude.ai's connector fails at the "sign-in service" step before
   // ever reaching /authorize.
   router.post('/register', registerLimiter, (req: Request, res: Response) => {
-    applyRestrictedCors(req, res, allowedRedirectUris);
+    restrictCors(req, res);
 
     const body = req.body as {
       redirect_uris?: string[];
@@ -318,26 +390,34 @@ export function createOAuthRouter(options: {
       return;
     }
 
-    const disallowed = redirectUris.filter((uri) => !isAllowedRedirectUri(uri, allowedRedirectUris));
+    const disallowed = redirectUris.filter((uri) => !isAllowedRedirectUri(uri, allowedRedirectUris, strictRedirectUris));
     if (disallowed.length > 0) {
       res.status(400).json({
         error: 'invalid_redirect_uri',
-        error_description: `redirect_uri not on this server's allowlist: ${disallowed.join(', ')}`,
+        error_description: strictRedirectUris
+          ? `redirect_uri not accepted (strict mode: loopback or allowlisted only): ${disallowed.map(String).join(', ')}`
+          : `redirect_uri must be https, http loopback, or a custom app scheme without fragment: ${disallowed.map(String).join(', ')}`,
       });
       return;
     }
 
     const clientId = `mcp-${base64url(randomBytes(16))}`;
+    if (registeredClients.size >= MAX_REGISTERED_CLIENTS) {
+      const oldest = registeredClients.keys().next().value;
+      if (oldest !== undefined) registeredClients.delete(oldest);
+    }
     registeredClients.set(clientId, {
-      clientName: body.client_name,
+      clientName: typeof body.client_name === 'string' ? body.client_name.slice(0, 100) : undefined,
       redirectUris,
       createdAt: Date.now(),
     });
+    if (clientsFile) saveClients(clientsFile);
 
     res.status(201).json({
       client_id: clientId,
       client_id_issued_at: Math.floor(Date.now() / 1000),
       redirect_uris: redirectUris,
+      client_name: body.client_name,
       grant_types: body.grant_types?.length ? body.grant_types : ['authorization_code', 'refresh_token'],
       response_types: body.response_types?.length ? body.response_types : ['code'],
       token_endpoint_auth_method: 'none',
@@ -350,6 +430,7 @@ export function createOAuthRouter(options: {
     pruneExpired(pendingAuthorizations, PENDING_TTL_MS);
 
     const {
+      client_id: clientId,
       redirect_uri: clientRedirectUri,
       state: clientState,
       code_challenge: codeChallenge,
@@ -362,13 +443,22 @@ export function createOAuthRouter(options: {
       return;
     }
 
-    // Reject anything not on the allowlist BEFORE we ever redirect anywhere,
-    // to close the open-redirect: an attacker-supplied redirect_uri must
-    // never receive a Home Assistant authorization code.
-    if (!isAllowedRedirectUri(clientRedirectUri, allowedRedirectUris)) {
+    // The redirect_uri must exactly match one the client registered via
+    // /register — checked BEFORE we ever redirect anywhere, to close the
+    // open-redirect: an unregistered redirect_uri must never receive a Home
+    // Assistant authorization code.
+    const client = clientId ? registeredClients.get(clientId) : undefined;
+    if (!client) {
+      res.status(400).json({
+        error: 'invalid_client',
+        error_description: 'Unknown client_id; register via /register first',
+      });
+      return;
+    }
+    if (!client.redirectUris.includes(clientRedirectUri) || !isAllowedRedirectUri(clientRedirectUri, allowedRedirectUris, strictRedirectUris)) {
       res.status(400).json({
         error: 'invalid_request',
-        error_description: 'redirect_uri is not on the allowlist for this server',
+        error_description: 'redirect_uri does not match the client registration',
       });
       return;
     }
@@ -405,6 +495,10 @@ export function createOAuthRouter(options: {
     const ourHaRedirectUri = `${publicUrl}/callback`;
 
     const ourState = randomUUID();
+    const haAuthorizeUrl = new URL(`${haPublicUrl}/auth/authorize`);
+    haAuthorizeUrl.searchParams.set('client_id', ourHaClientId);
+    haAuthorizeUrl.searchParams.set('redirect_uri', ourHaRedirectUri);
+    haAuthorizeUrl.searchParams.set('state', ourState);
     pendingAuthorizations.set(ourState, {
       clientRedirectUri,
       clientState,
@@ -413,14 +507,51 @@ export function createOAuthRouter(options: {
       createdAt: Date.now(),
       ourHaClientId,
       ourHaRedirectUri,
+      clientId: clientId as string,
+      haAuthorizeUrl: haAuthorizeUrl.toString(),
+      approved: allowedRedirectUris.includes(clientRedirectUri),
     });
 
-    const haAuthorizeUrl = new URL(`${haPublicUrl}/auth/authorize`);
-    haAuthorizeUrl.searchParams.set('client_id', ourHaClientId);
-    haAuthorizeUrl.searchParams.set('redirect_uri', ourHaRedirectUri);
-    haAuthorizeUrl.searchParams.set('state', ourState);
+    if (allowedRedirectUris.includes(clientRedirectUri)) {
+      res.redirect(haAuthorizeUrl.toString());
+      return;
+    }
 
-    res.redirect(haAuthorizeUrl.toString());
+    // Dynamic registration is open, so anyone can register a redirect_uri.
+    // Ask the user to confirm where they will be sent before starting login.
+    let destination = clientRedirectUri;
+    try {
+      const parsed = new URL(clientRedirectUri);
+      destination = parsed.origin !== 'null' ? parsed.origin : `${parsed.protocol}//`;
+    } catch { /* validated above */ }
+    res.status(200).type('html').send(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Authorize access</title></head>
+<body style="font-family:sans-serif;max-width:32em;margin:3em auto;padding:0 1em">
+<h1>Authorize access</h1>
+<p><strong>${escapeHtml(client.clientName || 'An application')}</strong> wants to connect to your PostgreSQL MCP Server using your Home Assistant account.</p>
+<p>After you sign in, you will be sent to:<br><code>${escapeHtml(destination)}</code></p>
+<p>Only continue if you started this connection yourself.</p>
+<form method="post" action="/authorize/consent">
+<input type="hidden" name="request_id" value="${escapeHtml(ourState)}">
+<button type="submit" name="decision" value="approve">Approve</button>
+<button type="submit" name="decision" value="deny">Deny</button>
+</form></body></html>`);
+  });
+
+  router.post('/authorize/consent', authorizeLimiter, (req: Request, res: Response) => {
+    const { request_id: requestId, decision } = (req.body || {}) as Record<string, string | undefined>;
+    const pending = requestId ? pendingAuthorizations.get(requestId) : undefined;
+    if (!requestId || !pending || Date.now() - pending.createdAt > PENDING_TTL_MS) {
+      res.status(400).send('Unknown or expired authorization request. Please retry connecting.');
+      return;
+    }
+    if (decision !== 'approve') {
+      pendingAuthorizations.delete(requestId);
+      res.status(200).send('Access denied. You can close this window.');
+      return;
+    }
+    pending.approved = true;
+    res.redirect(pending.haAuthorizeUrl);
   });
 
   // --- Step 3/4: HA redirects back here with its own code; we exchange it ---
@@ -436,8 +567,8 @@ export function createOAuthRouter(options: {
     const pending = pendingAuthorizations.get(ourState);
     pendingAuthorizations.delete(ourState);
 
-    if (!pending) {
-      res.status(400).send('Unknown or expired authorization request. Please retry connecting from Claude.');
+    if (!pending || !pending.approved) {
+      res.status(400).send('Unknown or expired authorization request. Please retry connecting from your MCP client.');
       return;
     }
 
@@ -493,7 +624,7 @@ export function createOAuthRouter(options: {
   // --- Step 5/6: claude.ai redeems our code (or refreshes) for the real HA token ---
 
   router.post('/token', tokenLimiter, async (req: Request, res: Response) => {
-    applyRestrictedCors(req, res, allowedRedirectUris);
+    restrictCors(req, res);
 
     const { grant_type: grantType } = req.body as Record<string, string | undefined>;
 

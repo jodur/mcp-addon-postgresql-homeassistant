@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserContext } from '../types';
+import { derivePublicUrl } from './oauth-provider';
 
 // Extend Express Request to include service context
 declare global {
@@ -8,6 +9,22 @@ declare global {
       user?: UserContext;
     }
   }
+}
+
+/**
+ * RFC 9728 / MCP authorization challenge: lets OAuth-capable clients discover
+ * the protected resource metadata (and from it the authorization server).
+ */
+export function buildWwwAuthenticate(req: Request, invalidToken: boolean): string {
+  const params: string[] = [];
+  try {
+    const publicUrl = derivePublicUrl(req, (process.env.PUBLIC_URL || '').trim());
+    params.push(`resource_metadata="${publicUrl}/.well-known/oauth-protected-resource"`);
+  } catch {
+    // no resolvable host: fall back to a bare challenge
+  }
+  if (invalidToken) params.push('error="invalid_token"');
+  return params.length ? `Bearer ${params.join(', ')}` : 'Bearer';
 }
 
 /**
@@ -28,6 +45,7 @@ export async function authenticateToken(
       if (isDebugMode) {
         console.log('❌ Authentication failed: Missing or invalid authorization header');
       }
+      res.set('WWW-Authenticate', buildWwwAuthenticate(req, false));
       res.status(401).json({
         success: false,
         error: 'Authorization header with Bearer token is required',
@@ -42,6 +60,7 @@ export async function authenticateToken(
       if (isDebugMode) {
         console.log('❌ Authentication failed: Empty token');
       }
+      res.set('WWW-Authenticate', buildWwwAuthenticate(req, false));
       res.status(401).json({
         success: false,
         error: 'Token is required',
@@ -57,6 +76,7 @@ export async function authenticateToken(
       if (isDebugMode) {
         console.log('❌ Authentication failed: Invalid token');
       }
+      res.set('WWW-Authenticate', buildWwwAuthenticate(req, true));
       res.status(401).json({
         success: false,
         error: 'Invalid or expired token',
