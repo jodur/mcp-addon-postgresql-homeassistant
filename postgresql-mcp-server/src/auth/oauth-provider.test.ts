@@ -114,12 +114,12 @@ describe('isAllowedOrigin', () => {
   });
 });
 
-async function withServer(fn: (base: string) => Promise<void>, extra: { requireConsent?: boolean } = {}) {
+async function withServer(fn: (base: string) => Promise<void>) {
   const app = express();
   app.set('trust proxy', 1);
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
-  app.use(createOAuthRouter({ haBaseUrl: 'http://ha.invalid', haPublicUrlOverride: 'https://ha.example.com', ...extra }));
+  app.use(createOAuthRouter({ haBaseUrl: 'http://ha.invalid', haPublicUrlOverride: 'https://ha.example.com' }));
   app.post('/mcp', authenticateToken, (_req, res) => { res.json({ ok: true }); });
   const server = http.createServer(app);
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
@@ -151,7 +151,7 @@ describe('HTTP behaviour', () => {
     });
   });
 
-  test('registration + authorize enforce the registered redirect_uri and show consent', async () => {
+  test('registration + authorize enforce the registered redirect_uri and redirect to Home Assistant', async () => {
     await withServer(async (base) => {
       const bad = await fetch(`${base}/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ redirect_uris: ['http://evil.example.com/cb'] }) });
       assert.equal(bad.status, 400);
@@ -165,12 +165,11 @@ describe('HTTP behaviour', () => {
       assert.equal(mismatch.status, 400);
 
       const ok = await fetch(q('https://grok.example/cb'), { redirect: 'manual' });
-      assert.equal(ok.status, 200);
-      assert.ok((await ok.text()).includes('/authorize/consent'));
-    }, { requireConsent: true });
+      assert.equal(ok.status, 302);
+    });
   });
 
-  test('without requireConsent, authorize redirects straight to Home Assistant', async () => {
+  test('authorize redirects straight to Home Assistant', async () => {
     await withServer(async (base) => {
       const reg = await fetch(`${base}/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ redirect_uris: ['https://grok.example/cb'] }) });
       const { client_id } = await reg.json() as any;

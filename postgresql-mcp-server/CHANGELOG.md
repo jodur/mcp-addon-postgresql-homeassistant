@@ -1,5 +1,10 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.7.0] - 2026-10-08
+
+### Removed
+- Allow/Deny consent page and the `require_consent` option: Home Assistant login is always required, so the extra step was redundant.
+
 ## [1.6.2] - 2026-10-07
 
 ### Changed

@@ -13,7 +13,6 @@ ENABLE_TIMESCALE=$(bashio::config 'enable_timescale')
 PUBLIC_URL=$(bashio::config 'public_url')
 HA_PUBLIC_URL=$(bashio::config 'ha_public_url')
 OAUTH_ALLOWED_REDIRECT_URIS=$(bashio::config 'allowed_redirect_uris')
-OAUTH_REQUIRE_CONSENT=$(bashio::config 'require_consent')
 
 # Export as environment variables for Node.js application
 export DATABASE_URL
@@ -25,7 +24,6 @@ export ENABLE_TIMESCALE
 export PUBLIC_URL
 export HA_PUBLIC_URL
 export OAUTH_ALLOWED_REDIRECT_URIS
-export OAUTH_REQUIRE_CONSENT
 
 # Debug logging
 bashio::log.info "Configuration loaded:"

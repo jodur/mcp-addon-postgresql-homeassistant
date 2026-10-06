@@ -42,11 +42,8 @@ interface PendingAuthorization {
   ourHaClientId: string;
   ourHaRedirectUri: string;
   clientId: string;
-  // Where to send the user's browser to log into Home Assistant; only
-  // followed once the redirect_uri has been approved (consent step, or
-  // admin-allowlisted redirect_uri).
+  // Where to send the user's browser to log into Home Assistant.
   haAuthorizeUrl: string;
-  approved: boolean;
 }
 
 interface IssuedCode {
@@ -140,10 +137,6 @@ function applyRestrictedCors(req: Request, res: Response, extraAllowed: string[]
   } else {
     res.removeHeader('Access-Control-Allow-Origin');
   }
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
 }
 
 /**
@@ -288,12 +281,10 @@ export function createOAuthRouter(options: {
    */
   haBaseUrl: string;
   /**
-   * Trusted redirect_uris. These skip the consent page and, in strict mode,
+   * Trusted redirect_uris.    In strict mode, these
    * are the only non-loopback redirect_uris that may be registered.
    */
   allowedRedirectUris?: string[];
-  /** Show an Allow/Deny page for non-allowlisted redirect_uris (default false) */
-  requireConsent?: boolean;
   /** Only accept loopback and allowlisted redirect_uris (default false) */
   strictRedirectUris?: boolean;
   /** File used to persist registered clients across restarts (optional) */
@@ -304,7 +295,6 @@ export function createOAuthRouter(options: {
     haPublicUrlOverride = '',
     haBaseUrl,
     allowedRedirectUris = [],
-    requireConsent = false,
     strictRedirectUris = false,
     clientsFile,
   } = options;
@@ -512,55 +502,9 @@ export function createOAuthRouter(options: {
       ourHaRedirectUri,
       clientId: clientId as string,
       haAuthorizeUrl: haAuthorizeUrl.toString(),
-      approved: !requireConsent || allowedRedirectUris.includes(clientRedirectUri),
     });
 
-    if (!requireConsent || allowedRedirectUris.includes(clientRedirectUri)) {
-      res.redirect(haAuthorizeUrl.toString());
-      return;
-    }
-
-    // Dynamic registration is open, so anyone can register a redirect_uri.
-    // Ask the user to confirm where they will be sent before starting login.
-    let destination = clientRedirectUri;
-    try {
-      const parsed = new URL(clientRedirectUri);
-      destination = parsed.origin !== 'null' ? parsed.origin : `${parsed.protocol}//`;
-    } catch { /* validated above */ }
-    // helmet's default `form-action 'self'` also blocks the post-submit redirect
-    // to Home Assistant (a different origin), leaving the popup stuck.
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self' https: http:",
-    );
-    res.status(200).type('html').send(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Authorize access</title></head>
-<body style="font-family:sans-serif;max-width:32em;margin:3em auto;padding:0 1em">
-<h1>Authorize access</h1>
-<p><strong>${escapeHtml(client.clientName || 'An application')}</strong> wants to connect to your PostgreSQL MCP Server using your Home Assistant account.</p>
-<p>After you sign in, you will be sent to:<br><code>${escapeHtml(destination)}</code></p>
-<p>Only continue if you started this connection yourself.</p>
-<form method="post" action="/authorize/consent">
-<input type="hidden" name="request_id" value="${escapeHtml(ourState)}">
-<button type="submit" name="decision" value="approve">Approve</button>
-<button type="submit" name="decision" value="deny">Deny</button>
-</form></body></html>`);
-  });
-
-  router.post('/authorize/consent', authorizeLimiter, (req: Request, res: Response) => {
-    const { request_id: requestId, decision } = (req.body || {}) as Record<string, string | undefined>;
-    const pending = requestId ? pendingAuthorizations.get(requestId) : undefined;
-    if (!requestId || !pending || Date.now() - pending.createdAt > PENDING_TTL_MS) {
-      res.status(400).send('Unknown or expired authorization request. Please retry connecting.');
-      return;
-    }
-    if (decision !== 'approve') {
-      pendingAuthorizations.delete(requestId);
-      res.status(200).send('Access denied. You can close this window.');
-      return;
-    }
-    pending.approved = true;
-    res.redirect(pending.haAuthorizeUrl);
+    res.redirect(haAuthorizeUrl.toString());
   });
 
   // --- Step 3/4: HA redirects back here with its own code; we exchange it ---
@@ -576,7 +520,7 @@ export function createOAuthRouter(options: {
     const pending = pendingAuthorizations.get(ourState);
     pendingAuthorizations.delete(ourState);
 
-    if (!pending || !pending.approved) {
+    if (!pending) {
       res.status(400).send('Unknown or expired authorization request. Please retry connecting from your MCP client.');
       return;
     }
