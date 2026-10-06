@@ -54,6 +54,7 @@ enable_timescale: false
 public_url: ""              # optional, only needed for OAuth (see below)
 ha_public_url: ""           # optional, only needed for OAuth (see below)
 allowed_redirect_uris: ""   # optional, only needed for OAuth (see below)
+require_consent: false       # optional, show extra Allow/Deny page before HA login
 ```
 
 The MCP server always listens on container port 3000 internally — use the addon's **Network** tab in Home Assistant to change the externally reachable host port. There is no `server_port` option; changing the internal port independently of the fixed `3000/tcp` container mapping would silently break connectivity, so it was removed.

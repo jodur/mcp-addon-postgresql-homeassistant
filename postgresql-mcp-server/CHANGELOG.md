@@ -1,5 +1,10 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.6.2] - 2026-10-07
+
+### Changed
+- Allow/Deny consent page is now optional via the `require_consent` addon option (default `false`); the OAuth flow goes straight to Home Assistant login.
+
 ## [1.6.1] - 2026-10-07
 
 ### Fixed

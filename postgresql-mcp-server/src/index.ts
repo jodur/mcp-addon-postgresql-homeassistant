@@ -91,6 +91,7 @@ app.use(createOAuthRouter({
   haPublicUrlOverride: HA_PUBLIC_URL,
   haBaseUrl: HA_BASE_URL,
   allowedRedirectUris: OAUTH_ALLOWED_REDIRECT_URIS,
+  requireConsent: process.env.OAUTH_REQUIRE_CONSENT === 'true',
   strictRedirectUris: process.env.OAUTH_STRICT_REDIRECT_URIS === 'true',
   clientsFile: process.env.OAUTH_CLIENTS_FILE || '/data/oauth-clients.json',
 }));
@@ -132,7 +133,7 @@ async function initializeApp(): Promise<void> {
 function createMCPServer(): McpServer {
   const server = new McpServer({
     name: 'PostgreSQL MCP Server for Home Assistant',
-    version: '1.6.1',
+    version: '1.6.2',
   });
 
   // Create configuration object for database tools
@@ -227,7 +228,7 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     database: dbInitialized ? 'connected' : 'disconnected',
-    version: '1.6.1',
+    version: '1.6.2',
     sdk_compliant: true,
     auth_stats: {
       total_attempts: authAttempts,

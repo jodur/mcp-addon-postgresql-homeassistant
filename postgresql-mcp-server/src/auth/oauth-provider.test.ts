@@ -114,12 +114,12 @@ describe('isAllowedOrigin', () => {
   });
 });
 
-async function withServer(fn: (base: string) => Promise<void>) {
+async function withServer(fn: (base: string) => Promise<void>, extra: { requireConsent?: boolean } = {}) {
   const app = express();
   app.set('trust proxy', 1);
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
-  app.use(createOAuthRouter({ haBaseUrl: 'http://ha.invalid', haPublicUrlOverride: 'https://ha.example.com' }));
+  app.use(createOAuthRouter({ haBaseUrl: 'http://ha.invalid', haPublicUrlOverride: 'https://ha.example.com', ...extra }));
   app.post('/mcp', authenticateToken, (_req, res) => { res.json({ ok: true }); });
   const server = http.createServer(app);
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
@@ -167,6 +167,16 @@ describe('HTTP behaviour', () => {
       const ok = await fetch(q('https://grok.example/cb'), { redirect: 'manual' });
       assert.equal(ok.status, 200);
       assert.ok((await ok.text()).includes('/authorize/consent'));
+    }, { requireConsent: true });
+  });
+
+  test('without requireConsent, authorize redirects straight to Home Assistant', async () => {
+    await withServer(async (base) => {
+      const reg = await fetch(`${base}/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ redirect_uris: ['https://grok.example/cb'] }) });
+      const { client_id } = await reg.json() as any;
+      const res = await fetch(`${base}/authorize?response_type=code&client_id=${client_id}&redirect_uri=${encodeURIComponent('https://grok.example/cb')}&code_challenge=abc&code_challenge_method=S256`, { redirect: 'manual' });
+      assert.equal(res.status, 302);
+      assert.ok((res.headers.get('location') || '').startsWith('https://ha.example.com/auth/authorize'));
     });
   });
 });

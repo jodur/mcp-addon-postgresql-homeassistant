@@ -292,6 +292,8 @@ export function createOAuthRouter(options: {
    * are the only non-loopback redirect_uris that may be registered.
    */
   allowedRedirectUris?: string[];
+  /** Show an Allow/Deny page for non-allowlisted redirect_uris (default false) */
+  requireConsent?: boolean;
   /** Only accept loopback and allowlisted redirect_uris (default false) */
   strictRedirectUris?: boolean;
   /** File used to persist registered clients across restarts (optional) */
@@ -302,6 +304,7 @@ export function createOAuthRouter(options: {
     haPublicUrlOverride = '',
     haBaseUrl,
     allowedRedirectUris = [],
+    requireConsent = false,
     strictRedirectUris = false,
     clientsFile,
   } = options;
@@ -509,10 +512,10 @@ export function createOAuthRouter(options: {
       ourHaRedirectUri,
       clientId: clientId as string,
       haAuthorizeUrl: haAuthorizeUrl.toString(),
-      approved: allowedRedirectUris.includes(clientRedirectUri),
+      approved: !requireConsent || allowedRedirectUris.includes(clientRedirectUri),
     });
 
-    if (allowedRedirectUris.includes(clientRedirectUri)) {
+    if (!requireConsent || allowedRedirectUris.includes(clientRedirectUri)) {
       res.redirect(haAuthorizeUrl.toString());
       return;
     }

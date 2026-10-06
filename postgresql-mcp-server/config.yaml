@@ -1,7 +1,7 @@
 # Home Assistant Addon Configuration
 name: "PostgreSQL MCP Server"
 description: "Model Context Protocol server for PostgreSQL database access with authentication"
-version: "1.6.1"
+version: "1.6.2"
 slug: "postgresql-mcp-server"
 url: "https://github.com/jodur/mcp-addon-postgresql-homeassistant"
 codenotary: "notary@home-assistant.io"
@@ -29,6 +29,7 @@ options:
   public_url: ""
   ha_public_url: ""
   allowed_redirect_uris: ""
+  require_consent: false
 schema:
   database_url: "str"
   log_level: "list(debug|info|warn|error)"
@@ -39,6 +40,7 @@ schema:
   public_url: "str?"
   ha_public_url: "str?"
   allowed_redirect_uris: "str?"
+  require_consent: "bool"
 homeassistant_api: true
 ports:
   "3000/tcp": 3000

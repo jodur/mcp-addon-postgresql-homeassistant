@@ -29,6 +29,7 @@ The MCP server always listens on container port 3000 internally; use the addon's
 - **public_url**: The externally reachable base URL of this addon (e.g. your Cloudflare tunnel domain). Only needed for the OAuth login flow; leave blank to auto-detect from the incoming request
 - **ha_public_url**: Home Assistant's externally reachable URL. Only needed for the OAuth login flow; leave blank to auto-detect via the Supervisor API
 - **allowed_redirect_uris**: Comma-separated list of additional OAuth redirect URIs to trust, beyond claude.ai and localhost loopback (e.g. for other MCP clients you use)
+- **require_consent**: Show an extra Allow/Deny page before redirecting to Home Assistant login (default `false`). Home Assistant login is always required either way.
 
 ## Usage
 
