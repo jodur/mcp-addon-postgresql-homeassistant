@@ -1,5 +1,10 @@
 # Changelog - PostgreSQL MCP Server Add-on
 
+## [1.7.1] - 2026-10-23
+
+### Security
+- Upgrade Node.js base image from `node:18-alpine` to `node:22-alpine` (Node.js 18 is end-of-life and no longer receives security patches).
+
 ## [1.7.0] - 2026-10-08
 
 ### Removed

@@ -335,7 +335,7 @@ This MCP server is designed for **service-to-service communication** with AI ass
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22+
 - TypeScript
 - Docker (for addon packaging)
 - Home Assistant development environment
