@@ -3,7 +3,7 @@
 set -e
 
 # Build arguments
-BUILD_FROM="node:18-alpine"
+BUILD_FROM="node:22-alpine"
 BUILD_ARCH="amd64"
 
 # Create build context
